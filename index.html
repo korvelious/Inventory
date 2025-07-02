@@ -8,6 +8,55 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+      import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+      import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-functions.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyBVi2H979UqIc0D6t58Z_GwB8ax94UMkak",
+        authDomain: "farhop-inventory.firebaseapp.com",
+        projectId: "farhop-inventory",
+        storageBucket: "farhop-inventory.firebasestorage.app",
+        messagingSenderId: "1032603057511",
+        appId: "1:1032603057511:web:d3fc28572e40889a8c03c2"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      const functions = getFunctions(app);
+
+      // Make Firebase available globally
+      window.firebase = {
+        auth,
+        db,
+        functions,
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword,
+        signOut,
+        onAuthStateChanged,
+        sendPasswordResetEmail,
+        EmailAuthProvider,
+        reauthenticateWithCredential,
+        updatePassword,
+        collection,
+        addDoc,
+        getDocs,
+        updateDoc,
+        deleteDoc,
+        doc,
+        query,
+        where,
+        onSnapshot
+      };
+    </script>
     <style>
         * {
             margin: 0;
@@ -1056,39 +1105,37 @@
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            checkAuthentication();
+            // Set up Firebase Auth state listener
+            window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
+                if (user) {
+                    // User is signed in
+                    const email = user.email;
+                    
+                    // Get user profile from Firestore
+                    const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                    const q = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
+                    const querySnapshot = await window.firebase.getDocs(q);
+                    
+                    if (!querySnapshot.empty) {
+                        const userDoc = querySnapshot.docs[0];
+                        const userData = userDoc.data();
+                        
+                        isAuthenticated = true;
+                        currentUser = userData.username;
+                        await showMainApp();
+                    }
+                } else {
+                    // User is signed out
+                    checkAuthentication();
+                }
+            });
+            
             setupAuthEventListeners();
         });
 
         function checkAuthentication() {
-            const credentials = localStorage.getItem('inventory_credentials');
-            const session = localStorage.getItem('inventory_session');
-            
-            if (credentials && session) {
-                try {
-                    const creds = JSON.parse(credentials);
-                    const sessionData = JSON.parse(session);
-                    
-                    // Check if session is still valid (24 hours)
-                    if (Date.now() - sessionData.timestamp < 24 * 60 * 60 * 1000) {
-                        isAuthenticated = true;
-                        currentUser = sessionData.username;
-                        showMainApp();
-                        loadInventory();
-                        return;
-                    }
-                } catch (e) {
-                    console.log('Session expired or invalid');
-                }
-            }
-            
-            // Check if credentials exist for first-time setup
-            if (credentials) {
-                document.getElementById('setup-credentials').style.display = 'none';
-            } else {
-                document.getElementById('setup-credentials').style.display = 'block';
-            }
-            
+            // Firebase Auth state listener will handle authentication
+            // This function now just sets up the initial UI state
             showLoginScreen();
         }
 
@@ -1106,7 +1153,7 @@
             });
         }
 
-        function setupCredentials() {
+        async function setupCredentials() {
             const username = document.getElementById('setup-username').value;
             const password = document.getElementById('setup-password').value;
             const confirmPassword = document.getElementById('setup-confirm-password').value;
@@ -1129,74 +1176,101 @@
                 return;
             }
 
-            // Hash the password (simple hash for demo - in production use bcrypt)
-            const hashedPassword = btoa(password + 'salt123');
-            
-            const credentials = {
-                username: username,
-                password: hashedPassword,
-                securityQuestions: {
-                    question1: btoa(securityAnswer1.toLowerCase().trim() + 'salt123'),
-                    question2: btoa(securityAnswer2.toLowerCase().trim() + 'salt123'),
-                    question3: btoa(securityAnswer3.toLowerCase().trim() + 'salt123')
-                }
-            };
+            try {
+                // Create Firebase user account
+                const email = username + '@farhop-inventory.com'; // Create email from username
+                const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
+                const user = userCredential.user;
 
-            localStorage.setItem('inventory_credentials', JSON.stringify(credentials));
-            
-            // Send signup notification email
-            sendSignupEmail(username, password);
-            
-            // Auto-login after setup
-            isAuthenticated = true;
-            currentUser = username;
-            showMainApp();
-            showAlert('Account created successfully! Welcome to your inventory system.', 'success');
+                // Store user profile in Firestore
+                const userProfile = {
+                    username: username,
+                    email: email,
+                    securityQuestions: {
+                        question1: btoa(securityAnswer1.toLowerCase().trim() + 'salt123'),
+                        question2: btoa(securityAnswer2.toLowerCase().trim() + 'salt123'),
+                        question3: btoa(securityAnswer3.toLowerCase().trim() + 'salt123')
+                    },
+                    created: new Date().toISOString()
+                };
+
+                await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'users'), userProfile);
+
+                // Send signup notification email
+                sendSignupEmail(username, password);
+                
+                // Auto-login after setup
+                isAuthenticated = true;
+                currentUser = username;
+                await showMainApp();
+                showAlert('Account created successfully! Welcome to your inventory system.', 'success');
+            } catch (error) {
+                console.error('Error creating account:', error);
+                if (error.code === 'auth/email-already-in-use') {
+                    showAlert('Username already exists. Please choose a different username.', 'error');
+                } else {
+                    showAlert('Error creating account: ' + error.message, 'error');
+                }
+            }
         }
 
-        function login() {
+        async function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const hashedPassword = btoa(password + 'salt123');
-
-            const storedCredentials = localStorage.getItem('inventory_credentials');
-            
-            if (!storedCredentials) {
-                showLoginError('No account found. Please set up your credentials first.');
-                return;
-            }
 
             try {
-                const credentials = JSON.parse(storedCredentials);
+                const email = username + '@farhop-inventory.com';
+                const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
+                const user = userCredential.user;
+
+                // Get user profile from Firestore
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
+                const querySnapshot = await window.firebase.getDocs(q);
                 
-                if (credentials.username === username && credentials.password === hashedPassword) {
+                if (!querySnapshot.empty) {
+                    const userDoc = querySnapshot.docs[0];
+                    const userData = userDoc.data();
+                    
                     isAuthenticated = true;
-                    currentUser = username;
+                    currentUser = userData.username;
                     
                     // Create session
                     const session = {
-                        username: username,
+                        username: userData.username,
                         timestamp: Date.now()
                     };
                     localStorage.setItem('inventory_session', JSON.stringify(session));
                     
-                    showMainApp();
-                    loadInventory();
+                    await showMainApp();
                     showAlert('Login successful!', 'success');
                 } else {
-                    showLoginError('Invalid username or password!');
+                    showLoginError('User profile not found!');
                 }
-            } catch (e) {
-                showLoginError('Error during login. Please try again.');
+            } catch (error) {
+                console.error('Login error:', error);
+                if (error.code === 'auth/user-not-found') {
+                    showLoginError('Account not found. Please set up your account first.');
+                } else if (error.code === 'auth/wrong-password') {
+                    showLoginError('Invalid username or password!');
+                } else {
+                    showLoginError('Login error: ' + error.message);
+                }
             }
         }
 
-        function logout() {
-            isAuthenticated = false;
-            currentUser = null;
-            localStorage.removeItem('inventory_session');
-            showLoginScreen();
-            showAlert('Logged out successfully!', 'success');
+        async function logout() {
+            try {
+                await window.firebase.signOut(window.firebase.auth);
+                isAuthenticated = false;
+                currentUser = null;
+                localStorage.removeItem('inventory_session');
+                showLoginScreen();
+                showAlert('Logged out successfully!', 'success');
+            } catch (error) {
+                console.error('Logout error:', error);
+                showAlert('Error during logout: ' + error.message, 'error');
+            }
         }
 
         function showLoginScreen() {
@@ -1204,23 +1278,35 @@
             document.getElementById('main-app').style.display = 'none';
         }
 
-        function showMainApp() {
+        async function showMainApp() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
             setupEventListeners();
+            await loadInventory();
             updateDashboard();
             loadInventoryTable();
-            loadUserSettings();
+            await loadUserSettings();
         }
 
-        function loadInventory() {
-            const storedInventory = localStorage.getItem('inventory');
-            if (storedInventory) {
-                try {
-                    inventory = JSON.parse(storedInventory);
-                } catch (e) {
-                    inventory = [];
-                }
+        async function loadInventory() {
+            try {
+                const inventoryRef = window.firebase.collection(window.firebase.db, 'inventory');
+                const q = window.firebase.query(inventoryRef, window.firebase.where('userId', '==', currentUser));
+                const querySnapshot = await window.firebase.getDocs(q);
+                
+                inventory = [];
+                querySnapshot.forEach((doc) => {
+                    const item = doc.data();
+                    item.id = doc.id; // Add document ID
+                    inventory.push(item);
+                });
+                
+                // Sort by date added (newest first)
+                inventory.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                showAlert('Error loading inventory: ' + error.message, 'error');
+                inventory = [];
             }
         }
 
@@ -1302,34 +1388,42 @@
             }
         }
 
-        function saveItem(name, barcode, description, category, quantity, price, location, minStock, imageData) {
-            const item = {
-                id: Date.now(),
-                name: name,
-                barcode: barcode,
-                description: description,
-                category: category,
-                quantity: quantity,
-                price: price,
-                location: location,
-                minStock: minStock,
-                image: imageData,
-                dateAdded: new Date().toISOString()
-            };
+        async function saveItem(name, barcode, description, category, quantity, price, location, minStock, imageData) {
+            try {
+                const item = {
+                    userId: currentUser,
+                    name: name,
+                    barcode: barcode,
+                    description: description,
+                    category: category,
+                    quantity: quantity,
+                    price: price,
+                    location: location,
+                    minStock: minStock,
+                    image: imageData,
+                    dateAdded: new Date().toISOString()
+                };
 
-            inventory.push(item);
-            localStorage.setItem('inventory', JSON.stringify(inventory));
+                // Save to Firestore
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'inventory'), item);
+                item.id = docRef.id; // Use Firestore document ID
 
-            // Reset form
-            document.getElementById('add-item-form').reset();
-            document.getElementById('image-preview').style.display = 'none';
+                inventory.push(item);
 
-            // Show success message
-            showAlert('Item added successfully!', 'success');
+                // Reset form
+                document.getElementById('add-item-form').reset();
+                document.getElementById('image-preview').style.display = 'none';
 
-            // Update displays
-            updateDashboard();
-            loadInventoryTable();
+                // Show success message
+                showAlert('Item added successfully!', 'success');
+
+                // Update displays
+                updateDashboard();
+                loadInventoryTable();
+            } catch (error) {
+                console.error('Error saving item:', error);
+                showAlert('Error saving item: ' + error.message, 'error');
+            }
         }
 
         function loadInventoryTable() {
@@ -1401,7 +1495,7 @@
             const item = inventory.find(item => item.id === id);
             if (!item) return;
 
-            document.getElementById('edit-item-id').value = item.id;
+            document.getElementById('edit-item-id').value = item.id; // This is now the Firestore document ID
             document.getElementById('edit-item-name').value = item.name;
             document.getElementById('edit-item-quantity').value = item.quantity;
             document.getElementById('edit-item-price').value = item.price;
@@ -1409,33 +1503,54 @@
             document.getElementById('edit-modal').style.display = 'block';
         }
 
-        function updateItem() {
-            const id = parseInt(document.getElementById('edit-item-id').value);
+        async function updateItem() {
+            const id = document.getElementById('edit-item-id').value;
             const name = document.getElementById('edit-item-name').value;
             const quantity = parseInt(document.getElementById('edit-item-quantity').value);
             const price = parseFloat(document.getElementById('edit-item-price').value) || 0;
 
-            const itemIndex = inventory.findIndex(item => item.id === id);
-            if (itemIndex !== -1) {
-                inventory[itemIndex].name = name;
-                inventory[itemIndex].quantity = quantity;
-                inventory[itemIndex].price = price;
+            try {
+                const itemRef = window.firebase.doc(window.firebase.db, 'inventory', id);
+                await window.firebase.updateDoc(itemRef, {
+                    name: name,
+                    quantity: quantity,
+                    price: price
+                });
 
-                localStorage.setItem('inventory', JSON.stringify(inventory));
+                // Update local inventory
+                const itemIndex = inventory.findIndex(item => item.id === id);
+                if (itemIndex !== -1) {
+                    inventory[itemIndex].name = name;
+                    inventory[itemIndex].quantity = quantity;
+                    inventory[itemIndex].price = price;
+                }
+
                 closeEditModal();
                 updateDashboard();
                 loadInventoryTable();
                 showAlert('Item updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showAlert('Error updating item: ' + error.message, 'error');
             }
         }
 
-        function deleteItem(id) {
+        async function deleteItem(id) {
             if (confirm('Are you sure you want to delete this item?')) {
-                inventory = inventory.filter(item => item.id !== id);
-                localStorage.setItem('inventory', JSON.stringify(inventory));
-                updateDashboard();
-                loadInventoryTable();
-                showAlert('Item deleted successfully!', 'success');
+                try {
+                    const itemRef = window.firebase.doc(window.firebase.db, 'inventory', id);
+                    await window.firebase.deleteDoc(itemRef);
+
+                    // Remove from local inventory
+                    inventory = inventory.filter(item => item.id !== id);
+                    
+                    updateDashboard();
+                    loadInventoryTable();
+                    showAlert('Item deleted successfully!', 'success');
+                } catch (error) {
+                    console.error('Error deleting item:', error);
+                    showAlert('Error deleting item: ' + error.message, 'error');
+                }
             }
         }
 
@@ -1782,32 +1897,58 @@
         }
 
         // Settings Functions
-        function loadUserSettings() {
-            const userProfile = JSON.parse(localStorage.getItem('user_profile')) || {};
-            const credentials = JSON.parse(localStorage.getItem('inventory_credentials')) || {};
-            
-            // Load account information
-            document.getElementById('current-username').value = currentUser || '';
-            document.getElementById('user-email').value = userProfile.email || '';
-            document.getElementById('user-fullname').value = userProfile.fullname || '';
-            
-            // Load preferences
-            const preferences = JSON.parse(localStorage.getItem('user_preferences')) || {};
-            document.getElementById('auto-logout').checked = preferences.autoLogout !== false;
-            document.getElementById('notifications').checked = preferences.notifications !== false;
-            document.getElementById('low-stock-alerts').checked = preferences.lowStockAlerts !== false;
-            
-            // Load theme
-            const currentTheme = localStorage.getItem('theme') || 'default';
-            document.getElementById('theme-select').value = currentTheme;
-            
-            // Update about section
-            document.getElementById('total-items-settings').textContent = inventory.length;
-            document.getElementById('last-login').textContent = new Date().toLocaleString();
-            document.getElementById('account-created').textContent = userProfile.created || 'Unknown';
+        async function loadUserSettings() {
+            try {
+                // Load user profile from Firestore
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const querySnapshot = await window.firebase.getDocs(q);
+                
+                let userProfile = {};
+                let preferences = {};
+                
+                if (!querySnapshot.empty) {
+                    const userDoc = querySnapshot.docs[0];
+                    const userData = userDoc.data();
+                    
+                    userProfile = {
+                        email: userData.email || '',
+                        fullname: userData.fullname || '',
+                        created: userData.created || 'Unknown'
+                    };
+                    
+                    preferences = {
+                        autoLogout: userData.autoLogout !== false,
+                        notifications: userData.notifications !== false,
+                        lowStockAlerts: userData.lowStockAlerts !== false
+                    };
+                }
+                
+                // Load account information
+                document.getElementById('current-username').value = currentUser || '';
+                document.getElementById('user-email').value = userProfile.email || '';
+                document.getElementById('user-fullname').value = userProfile.fullname || '';
+                
+                // Load preferences
+                document.getElementById('auto-logout').checked = preferences.autoLogout;
+                document.getElementById('notifications').checked = preferences.notifications;
+                document.getElementById('low-stock-alerts').checked = preferences.lowStockAlerts;
+                
+                // Load theme (still use localStorage for theme)
+                const currentTheme = localStorage.getItem('theme') || 'default';
+                document.getElementById('theme-select').value = currentTheme;
+                
+                // Update about section
+                document.getElementById('total-items-settings').textContent = inventory.length;
+                document.getElementById('last-login').textContent = new Date().toLocaleString();
+                document.getElementById('account-created').textContent = userProfile.created || 'Unknown';
+            } catch (error) {
+                console.error('Error loading user settings:', error);
+                showAlert('Error loading user settings: ' + error.message, 'error');
+            }
         }
 
-        function changePassword() {
+        async function changePassword() {
             const currentPassword = document.getElementById('current-password').value;
             const newPassword = document.getElementById('new-password').value;
             const confirmPassword = document.getElementById('confirm-new-password').value;
@@ -1827,26 +1968,35 @@
                 return;
             }
             
-            // Verify current password
-            const storedCredentials = JSON.parse(localStorage.getItem('inventory_credentials'));
-            const currentHashedPassword = btoa(currentPassword + 'salt123');
-            
-            if (storedCredentials.password !== currentHashedPassword) {
-                showAlert('Current password is incorrect!', 'error');
-                return;
+            try {
+                const user = window.firebase.auth.currentUser;
+                if (!user) {
+                    showAlert('You must be logged in to change your password!', 'error');
+                    return;
+                }
+                
+                // Re-authenticate user before changing password
+                const email = currentUser + '@farhop-inventory.com';
+                const credential = window.firebase.EmailAuthProvider.credential(email, currentPassword);
+                await window.firebase.reauthenticateWithCredential(user, credential);
+                
+                // Change password
+                await window.firebase.updatePassword(user, newPassword);
+                
+                // Clear form
+                document.getElementById('current-password').value = '';
+                document.getElementById('new-password').value = '';
+                document.getElementById('confirm-new-password').value = '';
+                
+                showAlert('Password changed successfully!', 'success');
+            } catch (error) {
+                console.error('Error changing password:', error);
+                if (error.code === 'auth/wrong-password') {
+                    showAlert('Current password is incorrect!', 'error');
+                } else {
+                    showAlert('Error changing password: ' + error.message, 'error');
+                }
             }
-            
-            // Update password
-            const newHashedPassword = btoa(newPassword + 'salt123');
-            storedCredentials.password = newHashedPassword;
-            localStorage.setItem('inventory_credentials', JSON.stringify(storedCredentials));
-            
-            // Clear form
-            document.getElementById('current-password').value = '';
-            document.getElementById('new-password').value = '';
-            document.getElementById('confirm-new-password').value = '';
-            
-            showAlert('Password changed successfully!', 'success');
         }
 
         function changeTheme(theme) {
@@ -1865,67 +2015,100 @@
             showAlert('Theme changed successfully!', 'success');
         }
 
-        function exportUserData() {
-            const userData = {
-                inventory: inventory,
-                userProfile: JSON.parse(localStorage.getItem('user_profile')) || {},
-                preferences: JSON.parse(localStorage.getItem('user_preferences')) || {},
-                credentials: JSON.parse(localStorage.getItem('inventory_credentials')) || {},
-                exportDate: new Date().toISOString()
-            };
-            
-            const dataStr = JSON.stringify(userData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `inventory-complete-backup-${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            
-            URL.revokeObjectURL(url);
-            showAlert('Complete data exported successfully! Use this file to set up on other devices.', 'success');
+        async function exportUserData() {
+            try {
+                // Get user profile from Firestore
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const querySnapshot = await window.firebase.getDocs(q);
+                
+                let userProfile = {};
+                if (!querySnapshot.empty) {
+                    const userDoc = querySnapshot.docs[0];
+                    userProfile = userDoc.data();
+                }
+                
+                const userData = {
+                    inventory: inventory,
+                    userProfile: userProfile,
+                    exportDate: new Date().toISOString(),
+                    note: 'This export contains your inventory data. User credentials are managed by Firebase and cannot be exported.'
+                };
+                
+                const dataStr = JSON.stringify(userData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `inventory-backup-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+                showAlert('Inventory data exported successfully!', 'success');
+            } catch (error) {
+                console.error('Error exporting data:', error);
+                showAlert('Error exporting data: ' + error.message, 'error');
+            }
         }
 
-        function importUserData() {
+        async function importUserData() {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
             
-            input.onchange = function(e) {
+            input.onchange = async function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
                 
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = async function(e) {
                     try {
                         const userData = JSON.parse(e.target.result);
                         
                         if (userData.inventory) {
-                            inventory = userData.inventory;
-                            localStorage.setItem('inventory', JSON.stringify(inventory));
+                            // Import inventory items to Firestore
+                            for (const item of userData.inventory) {
+                                const importItem = {
+                                    userId: currentUser,
+                                    name: item.name,
+                                    barcode: item.barcode,
+                                    description: item.description,
+                                    category: item.category,
+                                    quantity: item.quantity,
+                                    price: item.price,
+                                    location: item.location,
+                                    minStock: item.minStock,
+                                    image: item.image,
+                                    dateAdded: item.dateAdded || new Date().toISOString()
+                                };
+                                
+                                await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'inventory'), importItem);
+                            }
+                            
+                            // Reload inventory
+                            await loadInventory();
                         }
                         
                         if (userData.userProfile) {
-                            localStorage.setItem('user_profile', JSON.stringify(userData.userProfile));
-                        }
-                        
-                        if (userData.preferences) {
-                            localStorage.setItem('user_preferences', JSON.stringify(userData.preferences));
-                        }
-                        
-                        // Import credentials if available (for multi-device setup)
-                        if (userData.credentials) {
-                            localStorage.setItem('inventory_credentials', JSON.stringify(userData.credentials));
-                            showAlert('Complete data imported! You can now login with your existing credentials.', 'success');
+                            // Update user profile in Firestore
+                            const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                            const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                            const querySnapshot = await window.firebase.getDocs(q);
+                            
+                            if (!querySnapshot.empty) {
+                                const userDoc = querySnapshot.docs[0];
+                                await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), userData.userProfile);
+                            }
                         }
                         
                         updateDashboard();
                         loadInventoryTable();
-                        loadUserSettings();
+                        await loadUserSettings();
                         showAlert('Data imported successfully!', 'success');
                     } catch (error) {
-                        showAlert('Error importing data. Please check the file format.', 'error');
+                        console.error('Error importing data:', error);
+                        showAlert('Error importing data: ' + error.message, 'error');
                     }
                 };
                 reader.readAsText(file);
@@ -1934,36 +2117,84 @@
             input.click();
         }
 
-        function clearAllData() {
+        async function clearAllData() {
             if (confirm('Are you sure you want to clear all data? This action cannot be undone!')) {
-                localStorage.clear();
-                inventory = [];
-                showAlert('All data cleared successfully!', 'success');
-                logout();
+                try {
+                    // Delete all inventory items for this user from Firestore
+                    const inventoryRef = window.firebase.collection(window.firebase.db, 'inventory');
+                    const q = window.firebase.query(inventoryRef, window.firebase.where('userId', '==', currentUser));
+                    const querySnapshot = await window.firebase.getDocs(q);
+                    
+                    const deletePromises = querySnapshot.docs.map(doc => 
+                        window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'inventory', doc.id))
+                    );
+                    
+                    await Promise.all(deletePromises);
+                    
+                    // Clear local inventory
+                    inventory = [];
+                    
+                    // Clear local storage (theme, etc.)
+                    localStorage.clear();
+                    
+                    showAlert('All data cleared successfully!', 'success');
+                    logout();
+                } catch (error) {
+                    console.error('Error clearing data:', error);
+                    showAlert('Error clearing data: ' + error.message, 'error');
+                }
             }
         }
 
         // Save user profile when fields change
-        function saveUserProfile() {
-            const userProfile = {
-                email: document.getElementById('user-email').value,
-                fullname: document.getElementById('user-fullname').value,
-                created: document.getElementById('account-created').textContent === 'Unknown' ? 
-                    new Date().toLocaleDateString() : document.getElementById('account-created').textContent
-            };
-            
-            localStorage.setItem('user_profile', JSON.stringify(userProfile));
+        async function saveUserProfile() {
+            try {
+                const userProfile = {
+                    email: document.getElementById('user-email').value,
+                    fullname: document.getElementById('user-fullname').value,
+                    created: document.getElementById('account-created').textContent === 'Unknown' ? 
+                        new Date().toLocaleDateString() : document.getElementById('account-created').textContent,
+                    updated: new Date().toISOString()
+                };
+                
+                // Save to Firestore
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const querySnapshot = await window.firebase.getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    const userDoc = querySnapshot.docs[0];
+                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), userProfile);
+                }
+            } catch (error) {
+                console.error('Error saving user profile:', error);
+                showAlert('Error saving profile: ' + error.message, 'error');
+            }
         }
 
         // Save preferences when checkboxes change
-        function savePreferences() {
-            const preferences = {
-                autoLogout: document.getElementById('auto-logout').checked,
-                notifications: document.getElementById('notifications').checked,
-                lowStockAlerts: document.getElementById('low-stock-alerts').checked
-            };
-            
-            localStorage.setItem('user_preferences', JSON.stringify(preferences));
+        async function savePreferences() {
+            try {
+                const preferences = {
+                    autoLogout: document.getElementById('auto-logout').checked,
+                    notifications: document.getElementById('notifications').checked,
+                    lowStockAlerts: document.getElementById('low-stock-alerts').checked,
+                    updated: new Date().toISOString()
+                };
+                
+                // Save to Firestore
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const querySnapshot = await window.firebase.getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    const userDoc = querySnapshot.docs[0];
+                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), preferences);
+                }
+            } catch (error) {
+                console.error('Error saving preferences:', error);
+                showAlert('Error saving preferences: ' + error.message, 'error');
+            }
         }
 
         // Email Functions
@@ -2013,7 +2244,7 @@
             recoveryUsername = '';
         }
 
-        function verifyUsername() {
+        async function verifyUsername() {
             const username = document.getElementById('recovery-username').value.trim();
             
             if (!username) {
@@ -2021,29 +2252,25 @@
                 return;
             }
 
-            const storedCredentials = localStorage.getItem('inventory_credentials');
-            
-            if (!storedCredentials) {
-                showAlert('No account found with that username!', 'error');
-                return;
-            }
-
             try {
-                const credentials = JSON.parse(storedCredentials);
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', username));
+                const querySnapshot = await window.firebase.getDocs(q);
                 
-                if (credentials.username === username) {
+                if (!querySnapshot.empty) {
                     recoveryUsername = username;
                     document.getElementById('forgot-step-1').style.display = 'none';
                     document.getElementById('forgot-step-2').style.display = 'block';
                 } else {
                     showAlert('No account found with that username!', 'error');
                 }
-            } catch (e) {
+            } catch (error) {
+                console.error('Error verifying username:', error);
                 showAlert('Error verifying username. Please try again.', 'error');
             }
         }
 
-        function verifySecurityQuestions() {
+        async function verifySecurityQuestions() {
             const answer1 = document.getElementById('recovery-answer-1').value.trim();
             const answer2 = document.getElementById('recovery-answer-2').value.trim();
             const answer3 = document.getElementById('recovery-answer-3').value.trim();
@@ -2053,36 +2280,39 @@
                 return;
             }
 
-            const storedCredentials = localStorage.getItem('inventory_credentials');
-            
-            if (!storedCredentials) {
-                showAlert('Account not found!', 'error');
-                return;
-            }
-
             try {
-                const credentials = JSON.parse(storedCredentials);
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', recoveryUsername));
+                const querySnapshot = await window.firebase.getDocs(q);
                 
-                const hashedAnswer1 = btoa(answer1.toLowerCase().trim() + 'salt123');
-                const hashedAnswer2 = btoa(answer2.toLowerCase().trim() + 'salt123');
-                const hashedAnswer3 = btoa(answer3.toLowerCase().trim() + 'salt123');
-
-                if (credentials.securityQuestions && 
-                    credentials.securityQuestions.question1 === hashedAnswer1 &&
-                    credentials.securityQuestions.question2 === hashedAnswer2 &&
-                    credentials.securityQuestions.question3 === hashedAnswer3) {
+                if (!querySnapshot.empty) {
+                    const userDoc = querySnapshot.docs[0];
+                    const userData = userDoc.data();
                     
-                    document.getElementById('forgot-step-2').style.display = 'none';
-                    document.getElementById('forgot-step-3').style.display = 'block';
+                    const hashedAnswer1 = btoa(answer1.toLowerCase().trim() + 'salt123');
+                    const hashedAnswer2 = btoa(answer2.toLowerCase().trim() + 'salt123');
+                    const hashedAnswer3 = btoa(answer3.toLowerCase().trim() + 'salt123');
+
+                    if (userData.securityQuestions && 
+                        userData.securityQuestions.question1 === hashedAnswer1 &&
+                        userData.securityQuestions.question2 === hashedAnswer2 &&
+                        userData.securityQuestions.question3 === hashedAnswer3) {
+                        
+                        document.getElementById('forgot-step-2').style.display = 'none';
+                        document.getElementById('forgot-step-3').style.display = 'block';
+                    } else {
+                        showAlert('Incorrect answers to security questions!', 'error');
+                    }
                 } else {
-                    showAlert('Incorrect answers to security questions!', 'error');
+                    showAlert('Account not found!', 'error');
                 }
-            } catch (e) {
+            } catch (error) {
+                console.error('Error verifying security questions:', error);
                 showAlert('Error verifying answers. Please try again.', 'error');
             }
         }
 
-        function resetPassword() {
+        async function resetPassword() {
             const newPassword = document.getElementById('new-password-recovery').value;
             const confirmPassword = document.getElementById('confirm-new-password-recovery').value;
 
@@ -2101,28 +2331,22 @@
                 return;
             }
 
-            const storedCredentials = localStorage.getItem('inventory_credentials');
-            
-            if (!storedCredentials) {
-                showAlert('Account not found!', 'error');
-                return;
-            }
-
             try {
-                const credentials = JSON.parse(storedCredentials);
+                const email = recoveryUsername + '@farhop-inventory.com';
                 
-                // Update password
-                const newHashedPassword = btoa(newPassword + 'salt123');
-                credentials.password = newHashedPassword;
+                // Send password reset email using Firebase Auth
+                await window.firebase.sendPasswordResetEmail(window.firebase.auth, email);
                 
-                localStorage.setItem('inventory_credentials', JSON.stringify(credentials));
-                
-                // Close modal and show success
                 closeForgotPassword();
-                showAlert('Password reset successfully! You can now login with your new password.', 'success');
+                showAlert('Password reset email sent! Please check your email and follow the instructions to reset your password.', 'success');
                 
-            } catch (e) {
-                showAlert('Error resetting password. Please try again.', 'error');
+            } catch (error) {
+                console.error('Error resetting password:', error);
+                if (error.code === 'auth/user-not-found') {
+                    showAlert('No account found with that email address.', 'error');
+                } else {
+                    showAlert('Error sending password reset email: ' + error.message, 'error');
+                }
             }
         }
 
