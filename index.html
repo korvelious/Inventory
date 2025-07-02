@@ -680,22 +680,6 @@
                     <input type="password" id="setup-password" placeholder="Choose Password" required>
                     <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
                     
-                    <div class="security-questions">
-                        <h4>Security Questions (for password recovery)</h4>
-                        <div class="form-group">
-                            <label for="security-question-1">What was your first pet's name?</label>
-                            <input type="text" id="security-question-1" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="security-question-2">What city were you born in?</label>
-                            <input type="text" id="security-question-2" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="security-question-3">What is your mother's maiden name?</label>
-                            <input type="text" id="security-question-3" class="form-control" required>
-                        </div>
-                    </div>
-                    
                     <button type="submit" class="login-btn">Set Up Account</button>
                 </form>
             </div>
@@ -713,28 +697,10 @@
                     <div class="form-group">
                         <input type="text" id="recovery-username" class="form-control" placeholder="Enter your username">
                     </div>
-                    <button class="btn btn-primary" onclick="verifyUsername()">Continue</button>
+                    <button class="btn btn-primary" onclick="sendPasswordReset()">Send Password Reset Email</button>
                 </div>
                 
-                <!-- Step 2: Answer Security Questions -->
-                <div id="forgot-step-2" style="display: none;">
-                    <p>Answer your security questions to reset your password.</p>
-                    <div class="form-group">
-                        <label for="recovery-answer-1">What was your first pet's name?</label>
-                        <input type="text" id="recovery-answer-1" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label for="recovery-answer-2">What city were you born in?</label>
-                        <input type="text" id="recovery-answer-2" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label for="recovery-answer-3">What is your mother's maiden name?</label>
-                        <input type="text" id="recovery-answer-3" class="form-control">
-                    </div>
-                    <button class="btn btn-primary" onclick="verifySecurityQuestions()">Verify Answers</button>
-                </div>
-                
-                <!-- Step 3: Set New Password -->
+                <!-- Step 2: Set New Password -->
                 <div id="forgot-step-3" style="display: none;">
                     <p>Set your new password.</p>
                     <div class="form-group">
@@ -1157,9 +1123,6 @@
             const username = document.getElementById('setup-username').value;
             const password = document.getElementById('setup-password').value;
             const confirmPassword = document.getElementById('setup-confirm-password').value;
-            const securityAnswer1 = document.getElementById('security-question-1').value;
-            const securityAnswer2 = document.getElementById('security-question-2').value;
-            const securityAnswer3 = document.getElementById('security-question-3').value;
 
             if (password !== confirmPassword) {
                 showAlert('Passwords do not match!', 'error');
@@ -1168,11 +1131,6 @@
 
             if (password.length < 6) {
                 showAlert('Password must be at least 6 characters long!', 'error');
-                return;
-            }
-
-            if (!securityAnswer1 || !securityAnswer2 || !securityAnswer3) {
-                showAlert('Please answer all security questions!', 'error');
                 return;
             }
 
@@ -1186,11 +1144,6 @@
                 const userProfile = {
                     username: username,
                     email: email,
-                    securityQuestions: {
-                        question1: btoa(securityAnswer1.toLowerCase().trim() + 'salt123'),
-                        question2: btoa(securityAnswer2.toLowerCase().trim() + 'salt123'),
-                        question3: btoa(securityAnswer3.toLowerCase().trim() + 'salt123')
-                    },
                     created: new Date().toISOString()
                 };
 
@@ -1999,22 +1952,6 @@
             }
         }
 
-        function changeTheme(theme) {
-            localStorage.setItem('theme', theme);
-            
-            // Remove existing theme classes
-            document.body.classList.remove('theme-dark', 'theme-light');
-            
-            // Apply new theme
-            if (theme === 'dark') {
-                document.body.classList.add('theme-dark');
-            } else if (theme === 'light') {
-                document.body.classList.add('theme-light');
-            }
-            
-            showAlert('Theme changed successfully!', 'success');
-        }
-
         async function exportUserData() {
             try {
                 // Get user profile from Firestore
@@ -2222,128 +2159,30 @@
         }
 
         // Forgot Password Functions
-        let recoveryUsername = '';
-
         function showForgotPassword() {
             document.getElementById('forgot-password-modal').style.display = 'block';
             document.getElementById('forgot-step-1').style.display = 'block';
-            document.getElementById('forgot-step-2').style.display = 'none';
-            document.getElementById('forgot-step-3').style.display = 'none';
-            
-            // Clear any previous data
-            document.getElementById('recovery-username').value = '';
-            document.getElementById('recovery-answer-1').value = '';
-            document.getElementById('recovery-answer-2').value = '';
-            document.getElementById('recovery-answer-3').value = '';
-            document.getElementById('new-password-recovery').value = '';
-            document.getElementById('confirm-new-password-recovery').value = '';
         }
 
         function closeForgotPassword() {
             document.getElementById('forgot-password-modal').style.display = 'none';
-            recoveryUsername = '';
         }
 
-        async function verifyUsername() {
+        async function sendPasswordReset() {
             const username = document.getElementById('recovery-username').value.trim();
-            
             if (!username) {
                 showAlert('Please enter your username!', 'error');
                 return;
             }
-
             try {
-                const usersRef = window.firebase.collection(window.firebase.db, 'users');
-                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', username));
-                const querySnapshot = await window.firebase.getDocs(q);
-                
-                if (!querySnapshot.empty) {
-                    recoveryUsername = username;
-                    document.getElementById('forgot-step-1').style.display = 'none';
-                    document.getElementById('forgot-step-2').style.display = 'block';
-                } else {
-                    showAlert('No account found with that username!', 'error');
-                }
-            } catch (error) {
-                console.error('Error verifying username:', error);
-                showAlert('Error verifying username. Please try again.', 'error');
-            }
-        }
-
-        async function verifySecurityQuestions() {
-            const answer1 = document.getElementById('recovery-answer-1').value.trim();
-            const answer2 = document.getElementById('recovery-answer-2').value.trim();
-            const answer3 = document.getElementById('recovery-answer-3').value.trim();
-
-            if (!answer1 || !answer2 || !answer3) {
-                showAlert('Please answer all security questions!', 'error');
-                return;
-            }
-
-            try {
-                const usersRef = window.firebase.collection(window.firebase.db, 'users');
-                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', recoveryUsername));
-                const querySnapshot = await window.firebase.getDocs(q);
-                
-                if (!querySnapshot.empty) {
-                    const userDoc = querySnapshot.docs[0];
-                    const userData = userDoc.data();
-                    
-                    const hashedAnswer1 = btoa(answer1.toLowerCase().trim() + 'salt123');
-                    const hashedAnswer2 = btoa(answer2.toLowerCase().trim() + 'salt123');
-                    const hashedAnswer3 = btoa(answer3.toLowerCase().trim() + 'salt123');
-
-                    if (userData.securityQuestions && 
-                        userData.securityQuestions.question1 === hashedAnswer1 &&
-                        userData.securityQuestions.question2 === hashedAnswer2 &&
-                        userData.securityQuestions.question3 === hashedAnswer3) {
-                        
-                        document.getElementById('forgot-step-2').style.display = 'none';
-                        document.getElementById('forgot-step-3').style.display = 'block';
-                    } else {
-                        showAlert('Incorrect answers to security questions!', 'error');
-                    }
-                } else {
-                    showAlert('Account not found!', 'error');
-                }
-            } catch (error) {
-                console.error('Error verifying security questions:', error);
-                showAlert('Error verifying answers. Please try again.', 'error');
-            }
-        }
-
-        async function resetPassword() {
-            const newPassword = document.getElementById('new-password-recovery').value;
-            const confirmPassword = document.getElementById('confirm-new-password-recovery').value;
-
-            if (!newPassword || !confirmPassword) {
-                showAlert('Please enter both password fields!', 'error');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showAlert('Passwords do not match!', 'error');
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                showAlert('Password must be at least 6 characters long!', 'error');
-                return;
-            }
-
-            try {
-                const email = recoveryUsername + '@farhop-inventory.com';
-                
-                // Send password reset email using Firebase Auth
+                const email = username + '@farhop-inventory.com';
                 await window.firebase.sendPasswordResetEmail(window.firebase.auth, email);
-                
                 closeForgotPassword();
                 showAlert('Password reset email sent! Please check your email and follow the instructions to reset your password.', 'success');
-                
             } catch (error) {
-                console.error('Error resetting password:', error);
+                console.error('Error sending password reset email:', error);
                 if (error.code === 'auth/user-not-found') {
-                    showAlert('No account found with that email address.', 'error');
+                    showAlert('No account found with that username.', 'error');
                 } else {
                     showAlert('Error sending password reset email: ' + error.message, 'error');
                 }
