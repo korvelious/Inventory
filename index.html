@@ -415,6 +415,29 @@
             font-size: 0.9em;
         }
 
+        .settings-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .settings-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .settings-section p {
+            margin: 10px 0;
+            color: #6c757d;
+        }
+
+        .settings-section .btn {
+            margin: 5px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -485,6 +508,7 @@
             <button class="nav-tab" onclick="showTab('inventory')">📋 Inventory</button>
             <button class="nav-tab" onclick="showTab('scanner')">📱 Scanner</button>
             <button class="nav-tab" onclick="showTab('reports')">📄 Reports</button>
+            <button class="nav-tab" onclick="showTab('settings')">⚙️ Settings</button>
         </div>
 
         <!-- Dashboard Tab -->
@@ -673,6 +697,95 @@
             <button class="btn btn-primary" onclick="generateReport()">Generate PDF Report</button>
             <button class="btn btn-success" onclick="exportToCSV()">Export to CSV</button>
         </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <h2>User Settings</h2>
+            
+            <div class="settings-section">
+                <h3>👤 Account Information</h3>
+                <div class="form-group">
+                    <label for="current-username">Current Username</label>
+                    <input type="text" id="current-username" class="form-control" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="user-email">Email Address</label>
+                    <input type="email" id="user-email" class="form-control" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="user-fullname">Full Name</label>
+                    <input type="text" id="user-fullname" class="form-control" placeholder="Enter your full name">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>🔐 Change Password</h3>
+                <div class="form-group">
+                    <label for="current-password">Current Password</label>
+                    <input type="password" id="current-password" class="form-control" placeholder="Enter current password">
+                </div>
+                <div class="form-group">
+                    <label for="new-password">New Password</label>
+                    <input type="password" id="new-password" class="form-control" placeholder="Enter new password">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-new-password">Confirm New Password</label>
+                    <input type="password" id="confirm-new-password" class="form-control" placeholder="Confirm new password">
+                </div>
+                <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>🎨 Appearance</h3>
+                <div class="form-group">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select" class="form-control" onchange="changeTheme(this.value)">
+                        <option value="default">Default Theme</option>
+                        <option value="dark">Dark Mode</option>
+                        <option value="light">Light Mode</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="language-select">Language</label>
+                    <select id="theme-select" class="form-control">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>📊 System Preferences</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="auto-logout" checked>
+                    <label for="auto-logout">Auto-logout after 24 hours</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="notifications" checked>
+                    <label for="notifications">Show notifications</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="low-stock-alerts" checked>
+                    <label for="low-stock-alerts">Low stock alerts</label>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>💾 Data Management</h3>
+                <button class="btn btn-success" onclick="exportUserData()">Export My Data</button>
+                <button class="btn btn-warning" onclick="importUserData()">Import Data</button>
+                <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>ℹ️ About</h3>
+                <p><strong>Version:</strong> 1.0.0</p>
+                <p><strong>Last Login:</strong> <span id="last-login">Never</span></p>
+                <p><strong>Total Items:</strong> <span id="total-items-settings">0</span></p>
+                <p><strong>Account Created:</strong> <span id="account-created">Unknown</span></p>
+            </div>
+        </div>
     </div>
 
     <!-- Edit Item Modal -->
@@ -799,7 +912,7 @@
             const storedCredentials = localStorage.getItem('inventory_credentials');
             
             if (!storedCredentials) {
-                showAlert('No account found. Please set up your credentials first.', 'error');
+                showLoginError('No account found. Please set up your credentials first.');
                 return;
             }
 
@@ -821,10 +934,10 @@
                     loadInventory();
                     showAlert('Login successful!', 'success');
                 } else {
-                    showAlert('Invalid username or password!', 'error');
+                    showLoginError('Invalid username or password!');
                 }
             } catch (e) {
-                showAlert('Error during login. Please try again.', 'error');
+                showLoginError('Error during login. Please try again.');
             }
         }
 
@@ -847,6 +960,7 @@
             setupEventListeners();
             updateDashboard();
             loadInventoryTable();
+            loadUserSettings();
         }
 
         function loadInventory() {
@@ -883,6 +997,13 @@
                     categoryFilter.style.display = 'none';
                 }
             });
+
+            // Settings auto-save
+            document.getElementById('user-email').addEventListener('blur', saveUserProfile);
+            document.getElementById('user-fullname').addEventListener('blur', saveUserProfile);
+            document.getElementById('auto-logout').addEventListener('change', savePreferences);
+            document.getElementById('notifications').addEventListener('change', savePreferences);
+            document.getElementById('low-stock-alerts').addEventListener('change', savePreferences);
         }
 
         function showTab(tabName) {
@@ -1275,7 +1396,199 @@
             
             setTimeout(() => {
                 alertDiv.remove();
-            }, 3000);
+            }, 5000);
+        }
+
+        function showLoginError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-error';
+            errorDiv.textContent = message;
+            errorDiv.style.marginTop = '10px';
+            
+            const loginForm = document.getElementById('login-form');
+            loginForm.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        // Settings Functions
+        function loadUserSettings() {
+            const userProfile = JSON.parse(localStorage.getItem('user_profile')) || {};
+            const credentials = JSON.parse(localStorage.getItem('inventory_credentials')) || {};
+            
+            // Load account information
+            document.getElementById('current-username').value = currentUser || '';
+            document.getElementById('user-email').value = userProfile.email || '';
+            document.getElementById('user-fullname').value = userProfile.fullname || '';
+            
+            // Load preferences
+            const preferences = JSON.parse(localStorage.getItem('user_preferences')) || {};
+            document.getElementById('auto-logout').checked = preferences.autoLogout !== false;
+            document.getElementById('notifications').checked = preferences.notifications !== false;
+            document.getElementById('low-stock-alerts').checked = preferences.lowStockAlerts !== false;
+            
+            // Load theme
+            const currentTheme = localStorage.getItem('theme') || 'default';
+            document.getElementById('theme-select').value = currentTheme;
+            
+            // Update about section
+            document.getElementById('total-items-settings').textContent = inventory.length;
+            document.getElementById('last-login').textContent = new Date().toLocaleString();
+            document.getElementById('account-created').textContent = userProfile.created || 'Unknown';
+        }
+
+        function changePassword() {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-new-password').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showAlert('Please fill in all password fields!', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showAlert('New passwords do not match!', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showAlert('New password must be at least 6 characters long!', 'error');
+                return;
+            }
+            
+            // Verify current password
+            const storedCredentials = JSON.parse(localStorage.getItem('inventory_credentials'));
+            const currentHashedPassword = btoa(currentPassword + 'salt123');
+            
+            if (storedCredentials.password !== currentHashedPassword) {
+                showAlert('Current password is incorrect!', 'error');
+                return;
+            }
+            
+            // Update password
+            const newHashedPassword = btoa(newPassword + 'salt123');
+            storedCredentials.password = newHashedPassword;
+            localStorage.setItem('inventory_credentials', JSON.stringify(storedCredentials));
+            
+            // Clear form
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-new-password').value = '';
+            
+            showAlert('Password changed successfully!', 'success');
+        }
+
+        function changeTheme(theme) {
+            localStorage.setItem('theme', theme);
+            
+            // Remove existing theme classes
+            document.body.classList.remove('theme-dark', 'theme-light');
+            
+            // Apply new theme
+            if (theme === 'dark') {
+                document.body.classList.add('theme-dark');
+            } else if (theme === 'light') {
+                document.body.classList.add('theme-light');
+            }
+            
+            showAlert('Theme changed successfully!', 'success');
+        }
+
+        function exportUserData() {
+            const userData = {
+                inventory: inventory,
+                userProfile: JSON.parse(localStorage.getItem('user_profile')) || {},
+                preferences: JSON.parse(localStorage.getItem('user_preferences')) || {},
+                exportDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(userData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `inventory-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            showAlert('Data exported successfully!', 'success');
+        }
+
+        function importUserData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const userData = JSON.parse(e.target.result);
+                        
+                        if (userData.inventory) {
+                            inventory = userData.inventory;
+                            localStorage.setItem('inventory', JSON.stringify(inventory));
+                        }
+                        
+                        if (userData.userProfile) {
+                            localStorage.setItem('user_profile', JSON.stringify(userData.userProfile));
+                        }
+                        
+                        if (userData.preferences) {
+                            localStorage.setItem('user_preferences', JSON.stringify(userData.preferences));
+                        }
+                        
+                        updateDashboard();
+                        loadInventoryTable();
+                        loadUserSettings();
+                        showAlert('Data imported successfully!', 'success');
+                    } catch (error) {
+                        showAlert('Error importing data. Please check the file format.', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone!')) {
+                localStorage.clear();
+                inventory = [];
+                showAlert('All data cleared successfully!', 'success');
+                logout();
+            }
+        }
+
+        // Save user profile when fields change
+        function saveUserProfile() {
+            const userProfile = {
+                email: document.getElementById('user-email').value,
+                fullname: document.getElementById('user-fullname').value,
+                created: document.getElementById('account-created').textContent === 'Unknown' ? 
+                    new Date().toLocaleDateString() : document.getElementById('account-created').textContent
+            };
+            
+            localStorage.setItem('user_profile', JSON.stringify(userProfile));
+        }
+
+        // Save preferences when checkboxes change
+        function savePreferences() {
+            const preferences = {
+                autoLogout: document.getElementById('auto-logout').checked,
+                notifications: document.getElementById('notifications').checked,
+                lowStockAlerts: document.getElementById('low-stock-alerts').checked
+            };
+            
+            localStorage.setItem('user_preferences', JSON.stringify(preferences));
         }
 
         // Close modal when clicking outside
