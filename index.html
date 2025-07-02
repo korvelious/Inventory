@@ -230,11 +230,80 @@
             margin: 20px 0;
         }
 
+        .scanner-frame {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
         #scanner-video {
             width: 100%;
             max-width: 400px;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: #000;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .scanner-target {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 100px;
+            border: 3px solid #00ff00;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .scanner-instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .scanner-instructions p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+
+        .scanner-status {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .scanner-status p {
+            margin: 0;
+            color: #2c3e50;
+            font-weight: 500;
         }
 
         .camera-controls {
@@ -647,10 +716,22 @@
         <div id="scanner" class="tab-content">
             <h2>Barcode Scanner</h2>
             <div class="scanner-container">
-                <video id="scanner-video" autoplay></video>
+                <div class="scanner-frame">
+                    <video id="scanner-video" autoplay muted playsinline></video>
+                    <div class="scanner-overlay">
+                        <div class="scanner-target"></div>
+                        <div class="scanner-instructions">
+                            <p>📱 Point camera at barcode</p>
+                            <p>📷 Hold steady for best results</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="camera-controls">
                     <button class="btn btn-primary" onclick="startScanner()">Start Scanner</button>
-                    <button class="btn btn-danger" onclick="stopScanner()">Stop Scanner</button>
+                    <button class="btn btn-danger" onclick="stopScanner()" disabled>Stop Scanner</button>
+                </div>
+                <div class="scanner-status">
+                    <p id="scanner-status-text">Ready to scan</p>
                 </div>
                 <div id="scan-result" class="alert" style="display: none;"></div>
             </div>
@@ -1206,46 +1287,147 @@
         }
 
         // Barcode Scanner Functions
+        let isScanning = false;
+        let lastScannedCode = '';
+        let scanTimeout = null;
+
         async function startScanner() {
+            if (isScanning) {
+                showAlert('Scanner is already running!', 'error');
+                return;
+            }
+
             try {
+                // Stop any existing scanner
+                stopScanner();
+                
+                // Reset scanning state
+                isScanning = true;
+                lastScannedCode = '';
+                
+                // Request camera access with iPhone-optimized settings
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        width: { ideal: 1920, max: 1920 },
+                        height: { ideal: 1080, max: 1080 },
+                        frameRate: { ideal: 30, max: 30 }
                     } 
                 });
                 
                 const video = document.getElementById('scanner-video');
                 video.srcObject = stream;
+                
+                // Wait for video to be ready
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
 
-                // Initialize ZXing scanner
+                // Initialize ZXing scanner with better settings
                 const codeReader = new ZXing.BrowserMultiFormatReader();
                 
+                // Configure scanner for better iPhone performance
+                codeReader.hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+                codeReader.hints.set(ZXing.DecodeHintType.PURE_BARCODE, false);
+                
                 codeReader.decodeFromVideoDevice(null, 'scanner-video', (result, err) => {
-                    if (result) {
-                        document.getElementById('item-barcode').value = result.text;
-                        showAlert(`Barcode scanned: ${result.text}`, 'success');
-                        stopScanner();
+                    if (result && isScanning) {
+                        const scannedCode = result.text.trim();
+                        
+                        // Prevent duplicate scans of the same code
+                        if (scannedCode === lastScannedCode) {
+                            return;
+                        }
+                        
+                        // Clear any existing timeout
+                        if (scanTimeout) {
+                            clearTimeout(scanTimeout);
+                        }
+                        
+                        // Set the scanned code
+                        lastScannedCode = scannedCode;
+                        document.getElementById('item-barcode').value = scannedCode;
+                        
+                        // Show success message
+                        showAlert(`Barcode scanned: ${scannedCode}`, 'success');
+                        
+                        // Stop scanner after a short delay to prevent immediate re-scanning
+                        scanTimeout = setTimeout(() => {
+                            stopScanner();
+                        }, 1000);
                     }
                 });
 
                 scanner = codeReader;
+                
+                // Update UI
+                document.querySelector('button[onclick="startScanner()"]').textContent = 'Scanning...';
+                document.querySelector('button[onclick="stopScanner()"]').disabled = false;
+                document.getElementById('scanner-status-text').textContent = 'Camera active - scanning for barcodes...';
+                
             } catch (error) {
-                showAlert('Error accessing camera: ' + error.message, 'error');
+                isScanning = false;
+                console.error('Scanner error:', error);
+                
+                if (error.name === 'NotAllowedError') {
+                    showAlert('Camera access denied. Please allow camera permissions and try again.', 'error');
+                } else if (error.name === 'NotFoundError') {
+                    showAlert('No camera found. Please check your device has a camera.', 'error');
+                } else {
+                    showAlert('Error accessing camera: ' + error.message, 'error');
+                }
             }
         }
 
         function stopScanner() {
+            isScanning = false;
+            
+            // Clear any pending timeout
+            if (scanTimeout) {
+                clearTimeout(scanTimeout);
+                scanTimeout = null;
+            }
+            
+            // Reset scanner
             if (scanner) {
-                scanner.reset();
+                try {
+                    scanner.reset();
+                } catch (e) {
+                    console.log('Scanner reset error:', e);
+                }
                 scanner = null;
             }
+            
+            // Stop video stream
             if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+                try {
+                    stream.getTracks().forEach(track => {
+                        track.stop();
+                    });
+                } catch (e) {
+                    console.log('Stream stop error:', e);
+                }
                 stream = null;
             }
-            document.getElementById('scanner-video').srcObject = null;
+            
+            // Clear video element
+            const video = document.getElementById('scanner-video');
+            if (video) {
+                video.srcObject = null;
+            }
+            
+            // Reset UI
+            document.querySelector('button[onclick="startScanner()"]').textContent = 'Start Scanner';
+            document.querySelector('button[onclick="stopScanner()"]').disabled = true;
+            document.getElementById('scanner-status-text').textContent = 'Ready to scan';
+            
+            // Clear last scanned code after a delay
+            setTimeout(() => {
+                lastScannedCode = '';
+            }, 2000);
         }
 
         // Report Generation Functions
