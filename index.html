@@ -84,6 +84,35 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
+        .btn-link {
+            background: none;
+            border: none;
+            color: #667eea;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+            padding: 5px;
+        }
+
+        .btn-link:hover {
+            color: #764ba2;
+        }
+
+        .security-questions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+
+        .security-questions h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
         .setup-credentials {
             margin-top: 20px;
             padding: 20px;
@@ -507,6 +536,48 @@
             margin: 5px;
         }
 
+        .barcode-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .barcode-input-group .form-control {
+            flex: 1;
+        }
+
+        .barcode-scan-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 15px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 50px;
+        }
+
+        .barcode-scan-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .barcode-scan-btn.scanning {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            animation: pulse 1s infinite;
+        }
+
+        .scanner-modal-content {
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .scanner-modal-content h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -542,25 +613,90 @@
 </head>
 <body>
     <!-- Login Screen -->
-    <div id="login-screen" class="login-container">
-        <h1>🔐 Inventory System</h1>
-        <form class="login-form" id="login-form">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit" class="login-btn">Login</button>
-        </form>
-        
-        <div class="setup-credentials" id="setup-credentials">
-            <h3>First Time Setup</h3>
-            <p>Set up your username and password to secure your inventory system.</p>
-            <form class="login-form" id="setup-form">
-                <input type="text" id="setup-username" placeholder="Choose Username" required>
-                <input type="password" id="setup-password" placeholder="Choose Password" required>
-                <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
-                <button type="submit" class="login-btn">Set Up Account</button>
+            <div id="login-screen" class="login-container">
+            <h1>🔐 Inventory System</h1>
+            <form class="login-form" id="login-form">
+                <input type="text" id="username" placeholder="Username" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit" class="login-btn">Login</button>
+                <button type="button" class="btn-link" onclick="showForgotPassword()">Forgot Password?</button>
             </form>
+            
+            <div class="setup-credentials" id="setup-credentials">
+                <h3>First Time Setup</h3>
+                <p>Set up your username and password to secure your inventory system.</p>
+                <form class="login-form" id="setup-form">
+                    <input type="text" id="setup-username" placeholder="Choose Username" required>
+                    <input type="password" id="setup-password" placeholder="Choose Password" required>
+                    <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
+                    
+                    <div class="security-questions">
+                        <h4>Security Questions (for password recovery)</h4>
+                        <div class="form-group">
+                            <label for="security-question-1">What was your first pet's name?</label>
+                            <input type="text" id="security-question-1" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="security-question-2">What city were you born in?</label>
+                            <input type="text" id="security-question-2" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="security-question-3">What is your mother's maiden name?</label>
+                            <input type="text" id="security-question-3" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="login-btn">Set Up Account</button>
+                </form>
+            </div>
         </div>
-    </div>
+
+        <!-- Forgot Password Modal -->
+        <div id="forgot-password-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeForgotPassword()">&times;</span>
+                <h2>🔑 Password Recovery</h2>
+                
+                <!-- Step 1: Enter Username -->
+                <div id="forgot-step-1">
+                    <p>Enter your username to recover your password.</p>
+                    <div class="form-group">
+                        <input type="text" id="recovery-username" class="form-control" placeholder="Enter your username">
+                    </div>
+                    <button class="btn btn-primary" onclick="verifyUsername()">Continue</button>
+                </div>
+                
+                <!-- Step 2: Answer Security Questions -->
+                <div id="forgot-step-2" style="display: none;">
+                    <p>Answer your security questions to reset your password.</p>
+                    <div class="form-group">
+                        <label for="recovery-answer-1">What was your first pet's name?</label>
+                        <input type="text" id="recovery-answer-1" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="recovery-answer-2">What city were you born in?</label>
+                        <input type="text" id="recovery-answer-2" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="recovery-answer-3">What is your mother's maiden name?</label>
+                        <input type="text" id="recovery-answer-3" class="form-control">
+                    </div>
+                    <button class="btn btn-primary" onclick="verifySecurityQuestions()">Verify Answers</button>
+                </div>
+                
+                <!-- Step 3: Set New Password -->
+                <div id="forgot-step-3" style="display: none;">
+                    <p>Set your new password.</p>
+                    <div class="form-group">
+                        <input type="password" id="new-password-recovery" class="form-control" placeholder="New Password">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="confirm-new-password-recovery" class="form-control" placeholder="Confirm New Password">
+                    </div>
+                    <button class="btn btn-primary" onclick="resetPassword()">Reset Password</button>
+                </div>
+            </div>
+        </div>
 
     <!-- Main Application (Hidden until login) -->
     <div id="main-app" class="container hidden">
@@ -636,7 +772,12 @@
 
                 <div class="form-group">
                     <label for="item-barcode">Barcode</label>
-                    <input type="text" id="item-barcode" class="form-control" placeholder="Scan or enter barcode">
+                    <div class="barcode-input-group">
+                        <input type="text" id="item-barcode" class="form-control" placeholder="Scan or enter barcode">
+                        <button type="button" class="barcode-scan-btn" onclick="activateScanner()" title="Scan Barcode">
+                            📷
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -715,26 +856,7 @@
         <!-- Scanner Tab -->
         <div id="scanner" class="tab-content">
             <h2>Barcode Scanner</h2>
-            <div class="scanner-container">
-                <div class="scanner-frame">
-                    <video id="scanner-video" autoplay muted playsinline></video>
-                    <div class="scanner-overlay">
-                        <div class="scanner-target"></div>
-                        <div class="scanner-instructions">
-                            <p>📱 Point camera at barcode</p>
-                            <p>📷 Hold steady for best results</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="camera-controls">
-                    <button class="btn btn-primary" onclick="startScanner()">Start Scanner</button>
-                    <button class="btn btn-danger" onclick="stopScanner()" disabled>Stop Scanner</button>
-                </div>
-                <div class="scanner-status">
-                    <p id="scanner-status-text">Ready to scan</p>
-                </div>
-                <div id="scan-result" class="alert" style="display: none;"></div>
-            </div>
+            <p>This scanner is now integrated into the Add Item form. Use the barcode icon next to the barcode field to scan.</p>
         </div>
 
         <!-- Reports Tab -->
@@ -869,6 +991,29 @@
         </div>
     </div>
 
+    <!-- Barcode Scanner Modal -->
+    <div id="scanner-modal" class="modal">
+        <div class="modal-content scanner-modal-content">
+            <span class="close" onclick="closeScannerModal()">&times;</span>
+            <h2>📷 Scan Barcode</h2>
+            <div class="scanner-container">
+                <div class="scanner-frame">
+                    <video id="scanner-video" autoplay muted playsinline></video>
+                    <div class="scanner-overlay">
+                        <div class="scanner-target"></div>
+                        <div class="scanner-instructions">
+                            <p>📱 Point camera at barcode</p>
+                            <p>📷 Hold steady for best results</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="scanner-status">
+                    <p id="scanner-status-text">Ready to scan</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Item Modal -->
     <div id="edit-modal" class="modal">
         <div class="modal-content">
@@ -957,6 +1102,9 @@
             const username = document.getElementById('setup-username').value;
             const password = document.getElementById('setup-password').value;
             const confirmPassword = document.getElementById('setup-confirm-password').value;
+            const securityAnswer1 = document.getElementById('security-question-1').value;
+            const securityAnswer2 = document.getElementById('security-question-2').value;
+            const securityAnswer3 = document.getElementById('security-question-3').value;
 
             if (password !== confirmPassword) {
                 showAlert('Passwords do not match!', 'error');
@@ -968,12 +1116,22 @@
                 return;
             }
 
+            if (!securityAnswer1 || !securityAnswer2 || !securityAnswer3) {
+                showAlert('Please answer all security questions!', 'error');
+                return;
+            }
+
             // Hash the password (simple hash for demo - in production use bcrypt)
             const hashedPassword = btoa(password + 'salt123');
             
             const credentials = {
                 username: username,
-                password: hashedPassword
+                password: hashedPassword,
+                securityQuestions: {
+                    question1: btoa(securityAnswer1.toLowerCase().trim() + 'salt123'),
+                    question2: btoa(securityAnswer2.toLowerCase().trim() + 'salt123'),
+                    question3: btoa(securityAnswer3.toLowerCase().trim() + 'salt123')
+                }
             };
 
             localStorage.setItem('inventory_credentials', JSON.stringify(credentials));
@@ -1291,9 +1449,18 @@
         let lastScannedCode = '';
         let scanTimeout = null;
 
+        function activateScanner() {
+            document.getElementById('scanner-modal').style.display = 'block';
+            startScanner();
+        }
+
+        function closeScannerModal() {
+            document.getElementById('scanner-modal').style.display = 'none';
+            stopScanner();
+        }
+
         async function startScanner() {
             if (isScanning) {
-                showAlert('Scanner is already running!', 'error');
                 return;
             }
 
@@ -1304,6 +1471,10 @@
                 // Reset scanning state
                 isScanning = true;
                 lastScannedCode = '';
+                
+                // Update button state
+                document.querySelector('.barcode-scan-btn').classList.add('scanning');
+                document.querySelector('.barcode-scan-btn').textContent = '📷';
                 
                 // Request camera access with iPhone-optimized settings
                 stream = await navigator.mediaDevices.getUserMedia({ 
@@ -1354,18 +1525,14 @@
                         // Show success message
                         showAlert(`Barcode scanned: ${scannedCode}`, 'success');
                         
-                        // Stop scanner after a short delay to prevent immediate re-scanning
+                        // Close modal and stop scanner
                         scanTimeout = setTimeout(() => {
-                            stopScanner();
+                            closeScannerModal();
                         }, 1000);
                     }
                 });
 
                 scanner = codeReader;
-                
-                // Update UI
-                document.querySelector('button[onclick="startScanner()"]').textContent = 'Scanning...';
-                document.querySelector('button[onclick="stopScanner()"]').disabled = false;
                 document.getElementById('scanner-status-text').textContent = 'Camera active - scanning for barcodes...';
                 
             } catch (error) {
@@ -1379,6 +1546,8 @@
                 } else {
                     showAlert('Error accessing camera: ' + error.message, 'error');
                 }
+                
+                closeScannerModal();
             }
         }
 
@@ -1420,8 +1589,8 @@
             }
             
             // Reset UI
-            document.querySelector('button[onclick="startScanner()"]').textContent = 'Start Scanner';
-            document.querySelector('button[onclick="stopScanner()"]').disabled = true;
+            document.querySelector('.barcode-scan-btn').classList.remove('scanning');
+            document.querySelector('.barcode-scan-btn').textContent = '📷';
             document.getElementById('scanner-status-text').textContent = 'Ready to scan';
             
             // Clear last scanned code after a delay
@@ -1773,11 +1942,157 @@
             localStorage.setItem('user_preferences', JSON.stringify(preferences));
         }
 
+        // Forgot Password Functions
+        let recoveryUsername = '';
+
+        function showForgotPassword() {
+            document.getElementById('forgot-password-modal').style.display = 'block';
+            document.getElementById('forgot-step-1').style.display = 'block';
+            document.getElementById('forgot-step-2').style.display = 'none';
+            document.getElementById('forgot-step-3').style.display = 'none';
+            
+            // Clear any previous data
+            document.getElementById('recovery-username').value = '';
+            document.getElementById('recovery-answer-1').value = '';
+            document.getElementById('recovery-answer-2').value = '';
+            document.getElementById('recovery-answer-3').value = '';
+            document.getElementById('new-password-recovery').value = '';
+            document.getElementById('confirm-new-password-recovery').value = '';
+        }
+
+        function closeForgotPassword() {
+            document.getElementById('forgot-password-modal').style.display = 'none';
+            recoveryUsername = '';
+        }
+
+        function verifyUsername() {
+            const username = document.getElementById('recovery-username').value.trim();
+            
+            if (!username) {
+                showAlert('Please enter your username!', 'error');
+                return;
+            }
+
+            const storedCredentials = localStorage.getItem('inventory_credentials');
+            
+            if (!storedCredentials) {
+                showAlert('No account found with that username!', 'error');
+                return;
+            }
+
+            try {
+                const credentials = JSON.parse(storedCredentials);
+                
+                if (credentials.username === username) {
+                    recoveryUsername = username;
+                    document.getElementById('forgot-step-1').style.display = 'none';
+                    document.getElementById('forgot-step-2').style.display = 'block';
+                } else {
+                    showAlert('No account found with that username!', 'error');
+                }
+            } catch (e) {
+                showAlert('Error verifying username. Please try again.', 'error');
+            }
+        }
+
+        function verifySecurityQuestions() {
+            const answer1 = document.getElementById('recovery-answer-1').value.trim();
+            const answer2 = document.getElementById('recovery-answer-2').value.trim();
+            const answer3 = document.getElementById('recovery-answer-3').value.trim();
+
+            if (!answer1 || !answer2 || !answer3) {
+                showAlert('Please answer all security questions!', 'error');
+                return;
+            }
+
+            const storedCredentials = localStorage.getItem('inventory_credentials');
+            
+            if (!storedCredentials) {
+                showAlert('Account not found!', 'error');
+                return;
+            }
+
+            try {
+                const credentials = JSON.parse(storedCredentials);
+                
+                const hashedAnswer1 = btoa(answer1.toLowerCase().trim() + 'salt123');
+                const hashedAnswer2 = btoa(answer2.toLowerCase().trim() + 'salt123');
+                const hashedAnswer3 = btoa(answer3.toLowerCase().trim() + 'salt123');
+
+                if (credentials.securityQuestions && 
+                    credentials.securityQuestions.question1 === hashedAnswer1 &&
+                    credentials.securityQuestions.question2 === hashedAnswer2 &&
+                    credentials.securityQuestions.question3 === hashedAnswer3) {
+                    
+                    document.getElementById('forgot-step-2').style.display = 'none';
+                    document.getElementById('forgot-step-3').style.display = 'block';
+                } else {
+                    showAlert('Incorrect answers to security questions!', 'error');
+                }
+            } catch (e) {
+                showAlert('Error verifying answers. Please try again.', 'error');
+            }
+        }
+
+        function resetPassword() {
+            const newPassword = document.getElementById('new-password-recovery').value;
+            const confirmPassword = document.getElementById('confirm-new-password-recovery').value;
+
+            if (!newPassword || !confirmPassword) {
+                showAlert('Please enter both password fields!', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showAlert('Passwords do not match!', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showAlert('Password must be at least 6 characters long!', 'error');
+                return;
+            }
+
+            const storedCredentials = localStorage.getItem('inventory_credentials');
+            
+            if (!storedCredentials) {
+                showAlert('Account not found!', 'error');
+                return;
+            }
+
+            try {
+                const credentials = JSON.parse(storedCredentials);
+                
+                // Update password
+                const newHashedPassword = btoa(newPassword + 'salt123');
+                credentials.password = newHashedPassword;
+                
+                localStorage.setItem('inventory_credentials', JSON.stringify(credentials));
+                
+                // Close modal and show success
+                closeForgotPassword();
+                showAlert('Password reset successfully! You can now login with your new password.', 'success');
+                
+            } catch (e) {
+                showAlert('Error resetting password. Please try again.', 'error');
+            }
+        }
+
         // Close modal when clicking outside
         window.onclick = function(event) {
             const modal = document.getElementById('edit-modal');
             if (event.target === modal) {
                 closeEditModal();
+            }
+            
+            const forgotModal = document.getElementById('forgot-password-modal');
+            if (event.target === forgotModal) {
+                closeForgotPassword();
+            }
+            
+            const scannerModal = document.getElementById('scanner-modal');
+            if (event.target === scannerModal) {
+                closeScannerModal();
             }
         }
     </script>
