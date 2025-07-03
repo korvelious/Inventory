@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventory Management System</title>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -659,6 +659,17 @@
                 padding: 10px 8px;
             }
         }
+
+        @media (max-width: 600px) {
+          .scanner-modal-content {
+            max-width: 100vw !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+          }
+        }
     </style>
 </head>
 <body>
@@ -815,17 +826,17 @@
 
                 <div class="form-group">
                     <label for="item-quantity">Quantity *</label>
-                    <input type="number" id="item-quantity" class="form-control" min="0" required>
+                    <input type="number" id="item-quantity" class="form-control" min="0" required inputmode="numeric">
                 </div>
 
                 <div class="form-group">
                     <label for="item-price">Price ($)</label>
-                    <input type="number" id="item-price" class="form-control" min="0" step="0.01">
+                    <input type="number" id="item-price" class="form-control" min="0" step="0.01" inputmode="decimal">
                 </div>
 
                 <div class="form-group">
                     <label for="item-image">Item Image</label>
-                    <input type="file" id="item-image" class="form-control" accept="image/*" onchange="previewImage(this)">
+                    <input type="file" id="item-image" class="form-control" accept="image/*" capture="environment" onchange="previewImage(this)">
                     <img id="image-preview" class="image-preview" style="display: none;">
                 </div>
 
@@ -924,7 +935,7 @@
                 </div>
                 <div class="form-group">
                     <label for="user-email">Email Address</label>
-                    <input type="email" id="user-email" class="form-control" placeholder="Enter your email">
+                    <input type="email" id="user-email" class="form-control" placeholder="Enter your email" inputmode="email">
                 </div>
                 <div class="form-group">
                     <label for="user-fullname">Full Name</label>
@@ -1050,11 +1061,11 @@
                 </div>
                 <div class="form-group">
                     <label for="edit-item-quantity">Quantity</label>
-                    <input type="number" id="edit-item-quantity" class="form-control" min="0" required>
+                    <input type="number" id="edit-item-quantity" class="form-control" min="0" required inputmode="numeric">
                 </div>
                 <div class="form-group">
                     <label for="edit-item-price">Price ($)</label>
-                    <input type="number" id="edit-item-price" class="form-control" min="0" step="0.01">
+                    <input type="number" id="edit-item-price" class="form-control" min="0" step="0.01" inputmode="decimal">
                 </div>
                 <button type="submit" class="btn btn-primary">Update Item</button>
             </form>
@@ -1415,8 +1426,8 @@
                 <td>${item.category || 'Uncategorized'}</td>
                 <td>${item.location || 'N/A'}</td>
                 <td>
-                    <button class="btn btn-warning" onclick="editItem('${item.id}')" style="padding: 5px 10px; margin: 2px;">✏️</button>
-                    <button class="btn btn-danger" onclick="deleteItem('${item.id}')" style="padding: 5px 10px; margin: 2px;">🗑️</button>
+                    <button class="btn btn-warning" onclick="editItem('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Edit item">✏️</button>
+                    <button class="btn btn-danger" onclick="deleteItem('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Delete item">🗑️</button>
                 </td>
             `;
             return row;
