@@ -1264,7 +1264,7 @@
                         const userData = userDoc.data();
                         
                         isAuthenticated = true;
-                        currentUser = userData.username;
+                        currentUser = userData.email;
                         await showMainApp();
                     }
             } else {
@@ -1287,25 +1287,25 @@
             const loginForm = document.getElementById('login-form');
             if (loginForm) {
                 loginForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
+                e.preventDefault();
                     console.log('Login form submitted');
                     try {
-                        login();
+                login();
                     } catch (err) {
                         console.error('Login handler error:', err);
                         showLoginError('A critical error occurred. See console for details.');
                     }
-                });
+            });
             }
 
             // Setup form
             const setupForm = document.getElementById('setup-form');
             if (setupForm) {
                 setupForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
+                e.preventDefault();
                     console.log('Signup form submitted');
                     try {
-                        setupCredentials();
+                setupCredentials();
                     } catch (err) {
                         console.error('Signup handler error:', err);
                         showAlert('A critical error occurred. See console for details.', 'error');
@@ -1353,10 +1353,10 @@
                 };
                 await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'users'), userProfile);
                 sendSignupEmail(email, password);
-                isAuthenticated = true;
+            isAuthenticated = true;
                 currentUser = email;
                 await showMainApp();
-                showAlert('Account created successfully! Welcome to your inventory system.', 'success');
+            showAlert('Account created successfully! Welcome to your inventory system.', 'success');
             } catch (error) {
                 console.error('Error creating account:', error);
                 if (error.code === 'auth/email-already-in-use') {
@@ -1385,7 +1385,7 @@
                     const userDoc = querySnapshot.docs[0];
                     const userData = userDoc.data();
                     isAuthenticated = true;
-                    currentUser = userData.username;
+                    currentUser = userData.email;
                     // Save IP
                     const ip = await getPublicIP();
                     await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: ip });
@@ -2253,7 +2253,7 @@
             try {
                 // Load user profile from Firestore
                 const usersRef = window.firebase.collection(window.firebase.db, 'users');
-                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const q = window.firebase.query(usersRef, window.firebase.where('email', '==', currentUser));
                 const querySnapshot = await window.firebase.getDocs(q);
                 
                 let userProfile = {};
@@ -2277,7 +2277,7 @@
                 }
             
             // Load account information
-            document.getElementById('current-username').value = currentUser || '';
+            document.getElementById('current-username').value = userProfile.email || '';
             document.getElementById('user-email').value = userProfile.email || '';
             document.getElementById('user-fullname').value = userProfile.fullname || '';
             
@@ -2355,7 +2355,7 @@
             try {
                 // Get user profile from Firestore
                 const usersRef = window.firebase.collection(window.firebase.db, 'users');
-                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const q = window.firebase.query(usersRef, window.firebase.where('email', '==', currentUser));
                 const querySnapshot = await window.firebase.getDocs(q);
                 
                 let userProfile = {};
@@ -2429,7 +2429,7 @@
                         if (userData.userProfile) {
                             // Update user profile in Firestore
                             const usersRef = window.firebase.collection(window.firebase.db, 'users');
-                            const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                            const q = window.firebase.query(usersRef, window.firebase.where('email', '==', currentUser));
                             const querySnapshot = await window.firebase.getDocs(q);
                             
                             if (!querySnapshot.empty) {
@@ -2491,7 +2491,7 @@
                 const user = window.firebase.auth.currentUser;
                 // Get current email from Firestore
                 const usersRef = window.firebase.collection(window.firebase.db, 'users');
-                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const q = window.firebase.query(usersRef, window.firebase.where('email', '==', currentUser));
                 const querySnapshot = await window.firebase.getDocs(q);
                 if (!querySnapshot.empty) {
                     const userDoc = querySnapshot.docs[0];
@@ -2544,7 +2544,7 @@
                 
                 // Save to Firestore
                 const usersRef = window.firebase.collection(window.firebase.db, 'users');
-                const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
+                const q = window.firebase.query(usersRef, window.firebase.where('email', '==', currentUser));
                 const querySnapshot = await window.firebase.getDocs(q);
                 
                 if (!querySnapshot.empty) {
@@ -3055,7 +3055,7 @@
               const userDoc = querySnapshot.docs[0];
               const userData = userDoc.data();
               isAuthenticated = true;
-              currentUser = userData.username;
+              currentUser = userData.email;
               // Save IP
               const ip = await getPublicIP();
               await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: ip });
