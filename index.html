@@ -735,7 +735,7 @@
         </div>
         <!-- Add version text at the bottom of the login/setup page -->
         <div id="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-          Version: 1.0.0 &mdash; Updated: 2024-06-09 12:00 UTC
+          Version: 1.0.0 — Updated: <span id="version-date"></span>
         </div>
     </div>
 
@@ -3154,6 +3154,19 @@
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+          const versionDate = new Date('2024-06-09T12:00:00Z'); // original UTC time
+          const options = {
+            year: 'numeric', month: 'long', day: 'numeric',
+            hour: 'numeric', minute: '2-digit',
+            hour12: true,
+            timeZoneName: 'short'
+          };
+          const localString = versionDate.toLocaleString(undefined, options);
+          const versionDateSpan = document.getElementById('version-date');
+          if (versionDateSpan) versionDateSpan.textContent = localString;
+        });
     </script>
 </body>
 </html> 
