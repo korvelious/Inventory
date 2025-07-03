@@ -2044,13 +2044,11 @@
         function generateReport() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
             const includeImages = document.getElementById('include-images').checked;
             const includeBarcodes = document.getElementById('include-barcodes').checked;
             const includePrices = document.getElementById('include-prices').checked;
             const includeLocations = document.getElementById('include-locations').checked;
             const reportType = document.getElementById('report-type').value;
-
             let filteredInventory = [...inventory];
 
             // Filter based on report type
@@ -2069,74 +2067,68 @@
                     break;
             }
 
-            // Add title
-            doc.setFontSize(20);
-            doc.text('Inventory Report', 105, 20, { align: 'center' });
-            
-            doc.setFontSize(12);
-            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
-            doc.text(`Total Items: ${filteredInventory.length}`, 105, 40, { align: 'center' });
-
-            // Prepare table data
-            const tableData = filteredInventory.map(item => {
-                const row = [
-                    item.name,
-                    item.quantity.toString(),
-                    item.category || 'N/A'
-                ];
-
-                if (includePrices) {
-                    row.push(`$${item.price.toFixed(2)}`);
+            // Table headers
+            let columns = ['Name', 'Barcode', 'Quantity'];
+            if (includeImages) columns.unshift('Image');
+            if (includePrices) columns.push('Price');
+            if (includeLocations) columns.push('Location');
+            let rows = [];
+            filteredInventory.forEach(item => {
+                let row = [];
+                if (includeImages) {
+                    // Add thumbnail (first image if available)
+                    let img = '';
+                    if (item.image && Array.isArray(item.image) && item.image[0]) {
+                        img = item.image[0];
+                    } else if (typeof item.image === 'string' && item.image) {
+                        img = item.image;
+                    }
+                    row.push(img);
                 }
-                if (includeLocations) {
-                    row.push(item.location || 'N/A');
-                }
-                if (includeBarcodes) {
-                    row.push(item.barcode || 'N/A');
-                }
-
-                return row;
+                row.push(item.name || '');
+                row.push(item.barcode || '');
+                row.push(item.quantity || 0);
+                if (includePrices) row.push(item.price ? `$${item.price.toFixed(2)}` : '');
+                if (includeLocations) row.push(item.location || '');
+                rows.push(row);
             });
-
-            // Define headers
-            const headers = ['Name', 'Quantity', 'Category'];
-            if (includePrices) headers.push('Price');
-            if (includeLocations) headers.push('Location');
-            if (includeBarcodes) headers.push('Barcode');
-
-            // Add table
-            doc.autoTable({
-                head: [headers],
-                body: tableData,
-                startY: 50,
-                styles: {
-                    fontSize: 10,
-                    cellPadding: 5
-                },
-                headStyles: {
-                    fillColor: [44, 62, 80],
-                    textColor: 255
-                }
+            // Draw table with images
+            let startY = 20;
+            doc.setFontSize(16);
+            doc.text('Inventory Report', 10, startY);
+            startY += 10;
+            let colX = 10;
+            let rowHeight = 18;
+            // Draw headers
+            columns.forEach((col, i) => {
+                doc.setFontSize(12);
+                doc.text(col, colX + i * 40, startY);
             });
-
-            // Add images if requested
-            if (includeImages) {
-                let yPosition = doc.lastAutoTable.finalY + 20;
-                filteredInventory.forEach((item, index) => {
-                    if (item.image && yPosition < 250) {
-                        try {
-                            doc.addImage(item.image, 'JPEG', 20, yPosition, 30, 30);
-                            yPosition += 40;
-                        } catch (e) {
-                            console.log('Error adding image:', e);
+            startY += 8;
+            // Draw rows
+            rows.forEach((row, rowIdx) => {
+                row.forEach((cell, colIdx) => {
+                    if (includeImages && colIdx === 0) {
+                        // Draw image thumbnail if present
+                        if (cell) {
+                            try {
+                                doc.addImage(cell, 'JPEG', colX + colIdx * 40, startY + rowIdx * rowHeight, 14, 14);
+                            } catch (e) {
+                                // If not JPEG, try PNG
+                                try {
+                                    doc.addImage(cell, 'PNG', colX + colIdx * 40, startY + rowIdx * rowHeight, 14, 14);
+                                } catch (e2) {
+                                    // If still fails, leave blank
+                                }
+                            }
                         }
+                    } else {
+                        doc.setFontSize(10);
+                        doc.text(String(cell), colX + colIdx * 40, startY + rowIdx * rowHeight + 10);
                     }
                 });
-            }
-
-            // Save the PDF
-            doc.save(`inventory-report-${new Date().toISOString().split('T')[0]}.pdf`);
-            showAlert('PDF report generated successfully!', 'success');
+            });
+            doc.save('inventory_report.pdf');
         }
 
         function exportToCSV() {
