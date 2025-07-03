@@ -1154,6 +1154,38 @@
         </div>
     </div>
 
+    <!-- Add Admin Login Button and Modal to Login Screen -->
+    <button type="button" class="btn-link" onclick="showAdminLogin()">Admin Login</button>
+    <div id="admin-login-modal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeAdminLogin()">&times;</span>
+        <h2>🔑 Admin Login</h2>
+        <form class="login-form" id="admin-login-form">
+          <input type="text" id="admin-username" placeholder="Admin Username" required>
+          <input type="password" id="admin-password" placeholder="Admin Password" required>
+          <button type="submit" class="login-btn">Login as Admin</button>
+        </form>
+      </div>
+    </div>
+    <!-- Add Admin Dashboard -->
+    <div id="admin-dashboard" class="container hidden">
+      <button class="logout-btn" onclick="logoutAdmin()">🚪 Logout</button>
+      <div class="header">
+        <h1>👤 Admin User Management</h1>
+        <p>View all signed up users</p>
+      </div>
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="admin-users-body"></tbody>
+      </table>
+    </div>
+
     <script>
         // Authentication variables
         let isAuthenticated = false;
@@ -2725,6 +2757,73 @@
 
         // At the end of the script, attach editItem to window
         window.editItem = editItem;
+
+        // Admin login logic
+        const ADMIN_USERNAME = 'admin';
+        const ADMIN_PASSWORD = 'changeme123'; // Change this to your secure password
+
+        function showAdminLogin() {
+          document.getElementById('admin-login-modal').style.display = 'block';
+        }
+        function closeAdminLogin() {
+          document.getElementById('admin-login-modal').style.display = 'none';
+        }
+        document.getElementById('admin-login-form').addEventListener('submit', function(e) {
+          e.preventDefault();
+          adminLogin();
+        });
+
+        function adminLogin() {
+          const username = document.getElementById('admin-username').value.trim();
+          const password = document.getElementById('admin-password').value;
+          if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+            showAdminDashboard();
+            closeAdminLogin();
+          } else {
+            showAlert('Invalid admin credentials!', 'error');
+          }
+        }
+
+        function showAdminDashboard() {
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('main-app').style.display = 'none';
+          document.getElementById('admin-dashboard').classList.remove('hidden');
+          loadAllUsers();
+        }
+        function logoutAdmin() {
+          document.getElementById('admin-dashboard').classList.add('hidden');
+          showLoginScreen();
+        }
+        async function loadAllUsers() {
+          try {
+            const usersRef = window.firebase.collection(window.firebase.db, 'users');
+            const querySnapshot = await window.firebase.getDocs(usersRef);
+            const tbody = document.getElementById('admin-users-body');
+            tbody.innerHTML = '';
+            querySnapshot.forEach(doc => {
+              const user = doc.data();
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${user.username || ''}</td>
+                <td>${user.email || ''}</td>
+                <td>${user.created ? new Date(user.created).toLocaleString() : ''}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+          } catch (error) {
+            showAlert('Error loading users: ' + error.message, 'error');
+          }
+        }
+        // ... existing code ...
+        // Add modal close logic for admin login
+        window.onclick = function(event) {
+          // ... existing code ...
+          const adminModal = document.getElementById('admin-login-modal');
+          if (event.target === adminModal) {
+            closeAdminLogin();
+          }
+        }
+        // ... existing code ...
     </script>
 </body>
 </html> 
