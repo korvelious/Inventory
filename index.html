@@ -1358,6 +1358,10 @@
         async function login() {
             const email = document.getElementById('login-email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
+            if (!email || !email.includes('@')) {
+                showLoginError('Please enter your full email address, not your username.');
+                return;
+            }
             try {
                 const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
                 const user = userCredential.user;
