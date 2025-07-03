@@ -1245,6 +1245,8 @@
         let inventory = [];
         let scanner = null;
         let stream = null;
+        // Add global isAdmin variable
+        let isAdmin = false;
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
@@ -1265,6 +1267,7 @@
                         
                         isAuthenticated = true;
                         currentUser = userData.email;
+                        isAdmin = userData.username === 'admin';
                         await showMainApp();
                     }
             } else {
@@ -1386,6 +1389,7 @@
                     const userData = userDoc.data();
                     isAuthenticated = true;
                     currentUser = userData.email;
+                    isAdmin = userData.username === 'admin';
                     // Save IP
                     const ip = await getPublicIP();
                     await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: ip });
@@ -3022,7 +3026,7 @@
           // Remove existing Admin tab if any
           const existing = document.getElementById('admin-nav-tab');
           if (existing) existing.remove();
-          if (currentUser === 'admin') {
+          if (isAdmin) {
             // Insert Admin tab before the last tab (Settings)
             const btn = document.createElement('button');
             btn.className = 'nav-tab';
