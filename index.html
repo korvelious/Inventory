@@ -1093,6 +1093,25 @@
                 </div>
                 <button class="btn btn-primary" onclick="saveBranding()">Save Branding</button>
             </div>
+
+            <!-- TSV Import Modal in Settings -->
+            <div id="tsv-import-modal" class="modal">
+              <div class="modal-content">
+                <span class="close" onclick="closeTSVImport()">&times;</span>
+                <h2>Import Items (TSV Paste)</h2>
+                <p>Paste your TSV data below. Each line should be:<br>
+                <code>Name [tab] Barcode [tab] Description [tab] Category [tab] Quantity [tab] Price [tab] Location [tab] MinStock [tab] Tags (comma-separated)</code></p>
+                <textarea id="tsv-import-textarea" class="form-control" rows="8" style="width:100%;font-family:monospace;"></textarea>
+                <button class="btn btn-primary" onclick="importTSVItems()">Import</button>
+                <div id="tsv-import-summary" style="margin-top:10px;"></div>
+              </div>
+            </div>
+
+            <!-- Add Import TSV button to Settings tab -->
+            <div class="settings-section">
+              <h3>📥 Quick Import</h3>
+              <button class="btn btn-success" onclick="showTSVImport()">Import Items (TSV Paste)</button>
+            </div>
         </div>
     </div>
 
@@ -3023,6 +3042,62 @@
             showAlert('Login as user failed: ' + error.message, 'error');
           }
         }
+
+        function showTSVImport() {
+          document.getElementById('tsv-import-modal').style.display = 'block';
+          document.getElementById('tsv-import-textarea').value = '';
+          document.getElementById('tsv-import-summary').innerHTML = '';
+        }
+        function closeTSVImport() {
+          document.getElementById('tsv-import-modal').style.display = 'none';
+        }
+        async function importTSVItems() {
+          const textarea = document.getElementById('tsv-import-textarea');
+          const summary = document.getElementById('tsv-import-summary');
+          const lines = textarea.value.trim().split(/\r?\n/);
+          let imported = 0, failed = 0;
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const parts = line.split('\t');
+            if (parts.length < 5) { failed++; continue; }
+            const [name, barcode, description, category, quantity, price, location, minStock, tags] = parts;
+            try {
+              const item = {
+                userId: currentUser,
+                name: name || '',
+                barcode: barcode || '',
+                description: description || '',
+                category: category || '',
+                quantity: parseInt(quantity) || 0,
+                price: parseFloat(price) || 0,
+                location: location || '',
+                minStock: parseInt(minStock) || 5,
+                tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+                image: [],
+                dateAdded: new Date().toISOString()
+              };
+              // Save to Firestore
+              const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'inventory'), item);
+              item.id = docRef.id;
+              inventory.push(item);
+              imported++;
+            } catch (e) {
+              failed++;
+            }
+          }
+          loadInventoryTable();
+          updateDashboard();
+          summary.innerHTML = `<span style='color:green;'>Imported: ${imported}</span> <span style='color:red;'>Failed: ${failed}</span>`;
+        }
+        // Modal close logic for TSV import
+        window.onclick = function(event) {
+          // ... existing code ...
+          const tsvModal = document.getElementById('tsv-import-modal');
+          if (event.target === tsvModal) {
+            closeTSVImport();
+          }
+        }
+        // ... existing code ...
     </script>
 </body>
 </html> 
