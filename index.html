@@ -2161,8 +2161,12 @@
                             doc.setFontSize(10);
                             doc.text(String(cell), colX + colIdx * 40, startY + rowIdx * rowHeight + 10);
                         }
-                    });
+                    } else {
+                        doc.setFontSize(10);
+                        doc.text(String(cell), colX + colIdx * 40, startY + rowIdx * rowHeight + 10);
+                    }
                 });
+            });
             doc.save('inventory_report.pdf');
         }
 
