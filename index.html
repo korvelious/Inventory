@@ -1410,18 +1410,20 @@
         // Prevent duplicate event listeners
         let eventListenersSetup = false;
         function setupEventListeners() {
-          if (eventListenersSetup) return;
-          eventListenersSetup = true;
-          // Add item form
-          document.getElementById('add-item-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            addItem();
-          });
-          // Edit item form
-          document.getElementById('edit-item-form').addEventListener('submit', function(e) {
+          if (!eventListenersSetup) {
+            // Add item form
+            document.getElementById('add-item-form').addEventListener('submit', function(e) {
+              e.preventDefault();
+              addItem();
+            });
+            eventListenersSetup = true;
+          }
+          // Always (re)attach edit form listener to avoid modal re-renders breaking it
+          const editForm = document.getElementById('edit-item-form');
+          editForm.onsubmit = function(e) {
             e.preventDefault();
             updateItem();
-          });
+          };
           // Report type change
           document.getElementById('report-type').addEventListener('change', function() {
             const categoryFilter = document.getElementById('category-filter');
@@ -1713,6 +1715,7 @@
         }
 
         async function updateItem() {
+            console.log('updateItem called');
             const id = document.getElementById('edit-item-id').value;
             const name = document.getElementById('edit-item-name').value;
             const barcode = document.getElementById('edit-item-barcode').value;
