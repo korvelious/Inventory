@@ -520,6 +520,21 @@
             width: 90%;
             max-width: 600px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 600px) {
+          .modal-content {
+            max-width: 100vw !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            overflow-y: auto !important;
+          }
         }
 
         .close {
@@ -1392,36 +1407,37 @@
             }
         }
 
+        // Prevent duplicate event listeners
+        let eventListenersSetup = false;
         function setupEventListeners() {
-            // Add item form
-            document.getElementById('add-item-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                addItem();
-            });
-
-            // Edit item form
-            document.getElementById('edit-item-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                updateItem();
-            });
-
-            // Report type change
-            document.getElementById('report-type').addEventListener('change', function() {
-                const categoryFilter = document.getElementById('category-filter');
-                if (this.value === 'category') {
-                    categoryFilter.style.display = 'block';
-                    loadCategories();
-                } else {
-                    categoryFilter.style.display = 'none';
-                }
-            });
-
-            // Settings auto-save
-            document.getElementById('user-email').addEventListener('blur', saveUserProfile);
-            document.getElementById('user-fullname').addEventListener('blur', saveUserProfile);
-            document.getElementById('auto-logout').addEventListener('change', savePreferences);
-            document.getElementById('notifications').addEventListener('change', savePreferences);
-            document.getElementById('low-stock-alerts').addEventListener('change', savePreferences);
+          if (eventListenersSetup) return;
+          eventListenersSetup = true;
+          // Add item form
+          document.getElementById('add-item-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            addItem();
+          });
+          // Edit item form
+          document.getElementById('edit-item-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateItem();
+          });
+          // Report type change
+          document.getElementById('report-type').addEventListener('change', function() {
+            const categoryFilter = document.getElementById('category-filter');
+            if (this.value === 'category') {
+              categoryFilter.style.display = 'block';
+              loadCategories();
+            } else {
+              categoryFilter.style.display = 'none';
+            }
+          });
+          // Settings auto-save
+          document.getElementById('user-email').addEventListener('blur', saveUserProfile);
+          document.getElementById('user-fullname').addEventListener('blur', saveUserProfile);
+          document.getElementById('auto-logout').addEventListener('change', savePreferences);
+          document.getElementById('notifications').addEventListener('change', savePreferences);
+          document.getElementById('low-stock-alerts').addEventListener('change', savePreferences);
         }
 
         function showTab(tabName) {
