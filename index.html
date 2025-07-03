@@ -2862,9 +2862,23 @@
         // Show user details modal
         async function showUserDetails(userId) {
           try {
+            const userDocRef = window.firebase.doc(window.firebase.db, 'users', userId);
             const userDoc = await window.firebase.getDocs(window.firebase.query(window.firebase.collection(window.firebase.db, 'users'), window.firebase.where(window.firebase.doc(window.firebase.db, 'users', userId).id, '==', userId)));
             let user = null;
-            userDoc.forEach(doc => { user = doc.data(); });
+            // Replace the above with getDoc
+            const docSnap = await window.firebase.getDocs(window.firebase.query(window.firebase.collection(window.firebase.db, 'users'), window.firebase.where(window.firebase.doc(window.firebase.db, 'users', userId).id, '==', userId)));
+            // Correction:
+            // const docSnap = await window.firebase.getDoc(userDocRef);
+            // if (docSnap.exists()) { user = docSnap.data(); }
+            // else { user = null; }
+            // For now, use the correct getDoc logic:
+            const getDoc = window.firebase.getDoc;
+            const snap = await getDoc(userDocRef);
+            if (snap.exists()) {
+              user = snap.data();
+            } else {
+              user = null;
+            }
             if (!user) {
               document.getElementById('user-details-content').innerHTML = '<p>User not found.</p>';
             } else {
