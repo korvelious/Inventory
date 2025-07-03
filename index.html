@@ -253,13 +253,14 @@
             color: #2c3e50;
         }
 
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s ease;
+        .form-control, .form-control textarea {
+          width: 100%;
+          padding: 12px 15px;
+          border: 2px solid #e9ecef;
+          border-radius: 8px;
+          font-size: 1em;
+          font-family: inherit;
+          transition: border-color 0.3s ease;
         }
 
         .form-control:focus {
@@ -1135,7 +1136,7 @@
                 </div>
                 <div class="form-group">
                     <label for="edit-item-description">Description</label>
-                    <textarea id="edit-item-description" class="form-control"></textarea>
+                    <textarea id="edit-item-description" class="form-control" rows="3"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="edit-item-category">Category</label>
@@ -1420,35 +1421,45 @@
         let eventListenersSetup = false;
         function setupEventListeners() {
           if (!eventListenersSetup) {
-            // Add item form
-            document.getElementById('add-item-form').addEventListener('submit', function(e) {
-              e.preventDefault();
-              addItem();
-            });
+            const addForm = document.getElementById('add-item-form');
+            if (addForm) {
+              addForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                addItem();
+              });
+            }
             eventListenersSetup = true;
           }
-          // Always (re)attach edit form listener to avoid modal re-renders breaking it
+          // Always (re)attach edit form listener
           const editForm = document.getElementById('edit-item-form');
-          editForm.onsubmit = function(e) {
-            e.preventDefault();
-            updateItem();
-          };
-          // Report type change
-          document.getElementById('report-type').addEventListener('change', function() {
-            const categoryFilter = document.getElementById('category-filter');
-            if (this.value === 'category') {
-              categoryFilter.style.display = 'block';
-              loadCategories();
-            } else {
-              categoryFilter.style.display = 'none';
-            }
-          });
-          // Settings auto-save
-          document.getElementById('user-email').addEventListener('blur', saveUserProfile);
-          document.getElementById('user-fullname').addEventListener('blur', saveUserProfile);
-          document.getElementById('auto-logout').addEventListener('change', savePreferences);
-          document.getElementById('notifications').addEventListener('change', savePreferences);
-          document.getElementById('low-stock-alerts').addEventListener('change', savePreferences);
+          if (editForm) {
+            editForm.onsubmit = function(e) {
+              e.preventDefault();
+              updateItem();
+            };
+          }
+          const reportType = document.getElementById('report-type');
+          if (reportType) {
+            reportType.addEventListener('change', function() {
+              const categoryFilter = document.getElementById('category-filter');
+              if (this.value === 'category') {
+                categoryFilter.style.display = 'block';
+                loadCategories();
+              } else {
+                categoryFilter.style.display = 'none';
+              }
+            });
+          }
+          const userEmail = document.getElementById('user-email');
+          if (userEmail) userEmail.addEventListener('blur', saveUserProfile);
+          const userFullname = document.getElementById('user-fullname');
+          if (userFullname) userFullname.addEventListener('blur', saveUserProfile);
+          const autoLogout = document.getElementById('auto-logout');
+          if (autoLogout) autoLogout.addEventListener('change', savePreferences);
+          const notifications = document.getElementById('notifications');
+          if (notifications) notifications.addEventListener('change', savePreferences);
+          const lowStockAlerts = document.getElementById('low-stock-alerts');
+          if (lowStockAlerts) lowStockAlerts.addEventListener('change', savePreferences);
         }
 
         function showTab(tabName) {
@@ -1724,51 +1735,58 @@
         }
 
         async function updateItem() {
-            console.log('updateItem called');
-            const id = document.getElementById('edit-item-id').value;
-            const name = document.getElementById('edit-item-name').value;
-            const barcode = document.getElementById('edit-item-barcode').value;
-            const description = document.getElementById('edit-item-description').value;
-            const category = document.getElementById('edit-item-category').value;
-            const quantity = parseInt(document.getElementById('edit-item-quantity').value);
-            const price = parseFloat(document.getElementById('edit-item-price').value) || 0;
-            const location = document.getElementById('edit-item-location').value;
-            const minStock = parseInt(document.getElementById('edit-item-min-stock').value) || 5;
-            const imageFiles = window.editImageFiles || document.getElementById('edit-item-images').files;
-            let imageData = [];
-            const MAX_IMAGES = 3;
-            const MAX_TOTAL_SIZE = 1048487; // 1MB
-            if (imageFiles.length > MAX_IMAGES) {
-                showAlert(`You can only upload up to ${MAX_IMAGES} images per item.`, 'error');
-                return;
-            }
-            if (imageFiles.length > 0) {
-                let processed = 0;
-                let errored = false;
-                for (let i = 0; i < imageFiles.length; i++) {
-                    try {
-                        const dataUrl = await resizeAndCompressImage(imageFiles[i]);
-                        imageData[i] = dataUrl;
-                        processed++;
-                    } catch (err) {
-                        errored = true;
-                        showAlert(err, 'error');
-                        break;
-                    }
+            try {
+                console.log('updateItem called');
+                const id = document.getElementById('edit-item-id').value;
+                const name = document.getElementById('edit-item-name').value;
+                const barcode = document.getElementById('edit-item-barcode').value;
+                const description = document.getElementById('edit-item-description').value;
+                const category = document.getElementById('edit-item-category').value;
+                const quantity = parseInt(document.getElementById('edit-item-quantity').value);
+                const price = parseFloat(document.getElementById('edit-item-price').value) || 0;
+                const location = document.getElementById('edit-item-location').value;
+                const minStock = parseInt(document.getElementById('edit-item-min-stock').value) || 5;
+                const tagsInput = document.getElementById('edit-item-tags');
+                const tags = tagsInput ? tagsInput.value.split(',').map(t => t.trim()).filter(Boolean) : [];
+                const imageFiles = window.editImageFiles || document.getElementById('edit-item-images').files;
+                let imageData = [];
+                const MAX_IMAGES = 3;
+                const MAX_TOTAL_SIZE = 1048487; // 1MB
+                if (imageFiles.length > MAX_IMAGES) {
+                    showAlert(`You can only upload up to ${MAX_IMAGES} images per item.`, 'error');
+                    return;
                 }
-                if (!errored) {
-                    const totalSize = imageData.reduce((sum, img) => sum + (img.length || 0), 0);
-                    if (totalSize > MAX_TOTAL_SIZE) {
-                        showAlert('Total image size exceeds 1MB. Please use fewer or smaller images.', 'error');
-                        return;
+                if (imageFiles.length > 0) {
+                    let processed = 0;
+                    let errored = false;
+                    for (let i = 0; i < imageFiles.length; i++) {
+                        try {
+                            const dataUrl = await resizeAndCompressImage(imageFiles[i]);
+                            imageData[i] = dataUrl;
+                            processed++;
+                        } catch (err) {
+                            errored = true;
+                            showAlert(err, 'error');
+                            break;
+                        }
                     }
+                    if (!errored) {
+                        const totalSize = imageData.reduce((sum, img) => sum + (img.length || 0), 0);
+                        if (totalSize > MAX_TOTAL_SIZE) {
+                            showAlert('Total image size exceeds 1MB. Please use fewer or smaller images.', 'error');
+                            return;
+                        }
+                        await saveUpdatedItem(id, name, barcode, description, category, quantity, price, location, minStock, imageData, tags);
+                    }
+                } else {
+                    // If no new images, keep the old ones
+                    const item = inventory.find(item => item.id === id);
+                    imageData = item && item.image ? item.image : null;
                     await saveUpdatedItem(id, name, barcode, description, category, quantity, price, location, minStock, imageData, tags);
                 }
-            } else {
-                // If no new images, keep the old ones
-                const item = inventory.find(item => item.id === id);
-                imageData = item && item.image ? item.image : null;
-                await saveUpdatedItem(id, name, barcode, description, category, quantity, price, location, minStock, imageData, tags);
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showAlert('Error updating item: ' + error.message, 'error');
             }
         }
 
