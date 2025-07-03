@@ -1222,11 +1222,11 @@
 
             try {
                 // Create Firebase user account
-                const email = username + '@farhop-inventory.com'; // Create email from username
+                const email = username + '@farhop-inventory.com';
                 const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
                 const user = userCredential.user;
 
-                // Store user profile in Firestore
+                // Store user profile in Firestore (only required fields)
                 const userProfile = {
                     username: username,
                     email: email,
@@ -1270,17 +1270,14 @@
                 if (!querySnapshot.empty) {
                     const userDoc = querySnapshot.docs[0];
                     const userData = userDoc.data();
-                    
                     isAuthenticated = true;
                     currentUser = userData.username;
-                    
                     // Create session
                     const session = {
                         username: userData.username,
                         timestamp: Date.now()
                     };
                     localStorage.setItem('inventory_session', JSON.stringify(session));
-                    
                     await showMainApp();
                     showAlert('Login successful!', 'success');
                 } else {
