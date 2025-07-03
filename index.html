@@ -739,7 +739,7 @@
         </div>
         <!-- Add version text at the bottom of the login/setup page -->
         <div id="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-          Version: 1.0.0 — Updated: <span id="version-date"></span>
+          Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
         </div>
     </div>
 
@@ -837,7 +837,7 @@
             </div>
             <!-- Add version info to each main tab/page -->
             <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-              Version: 1.0.0 — Updated: <span class="version-date"></span>
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
             </div>
         </div>
 
@@ -914,7 +914,7 @@
             </form>
             <!-- Add version info to each main tab/page -->
             <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-              Version: 1.0.0 — Updated: <span class="version-date"></span>
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
             </div>
         </div>
 
@@ -943,7 +943,7 @@
             </table>
             <!-- Add version info to each main tab/page -->
             <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-              Version: 1.0.0 — Updated: <span class="version-date"></span>
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
             </div>
         </div>
 
@@ -991,7 +991,7 @@
             <button class="btn btn-success" onclick="exportToCSV()">Export to CSV</button>
             <!-- Add version info to each main tab/page -->
             <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-              Version: 1.0.0 — Updated: <span class="version-date"></span>
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
             </div>
         </div>
 
@@ -1143,7 +1143,7 @@
             </div>
             <!-- Add version info to each main tab/page -->
             <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-              Version: 1.0.0 — Updated: <span class="version-date"></span>
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
             </div>
         </div>
     </div>
@@ -1254,7 +1254,7 @@
       </table>
       <!-- Add version info to each main tab/page -->
       <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
-        Version: 1.0.0 — Updated: <span class="version-date"></span>
+        Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
       </div>
     </div>
     <!-- User Details Modal -->
@@ -3230,6 +3230,11 @@
           const localString = versionDate.toLocaleString(undefined, options);
           document.querySelectorAll('.version-date').forEach(el => {
             el.textContent = localString;
+          });
+          // Set commit hash (replace 'abcdef0' with your real commit if desired)
+          const commit = 'abcdef0';
+          document.querySelectorAll('.version-commit').forEach(el => {
+            el.textContent = commit;
           });
         });
 
