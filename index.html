@@ -1265,6 +1265,15 @@
                 e.preventDefault();
                 setupCredentials();
             });
+
+            // Add event listener for password reset button
+            const resetBtn = document.querySelector('#forgot-step-1 .btn.btn-primary');
+            if (resetBtn) {
+                resetBtn.onclick = function(e) {
+                    e.preventDefault();
+                    sendPasswordReset();
+                };
+            }
         }
 
         async function setupCredentials() {
@@ -2415,22 +2424,46 @@
         // Save user profile when fields change
         async function saveUserProfile() {
             try {
-            const userProfile = {
-                email: document.getElementById('user-email').value,
-                fullname: document.getElementById('user-fullname').value,
-                created: document.getElementById('account-created').textContent === 'Unknown' ? 
-                        new Date().toLocaleDateString() : document.getElementById('account-created').textContent,
-                    updated: new Date().toISOString()
-                };
-                
-                // Save to Firestore
+                const newEmail = document.getElementById('user-email').value.trim().toLowerCase();
+                const fullname = document.getElementById('user-fullname').value;
+                const created = document.getElementById('account-created').textContent === 'Unknown' ? new Date().toLocaleDateString() : document.getElementById('account-created').textContent;
+                const user = window.firebase.auth.currentUser;
+                // Get current email from Firestore
                 const usersRef = window.firebase.collection(window.firebase.db, 'users');
                 const q = window.firebase.query(usersRef, window.firebase.where('username', '==', currentUser));
                 const querySnapshot = await window.firebase.getDocs(q);
-                
                 if (!querySnapshot.empty) {
                     const userDoc = querySnapshot.docs[0];
+                    const userData = userDoc.data();
+                    const oldEmail = userData.email;
+                    // If email changed, update in Firebase Auth
+                    if (newEmail !== oldEmail) {
+                        // Prompt for current password
+                        const password = prompt('To change your email, please enter your current password:');
+                        if (!password) {
+                            showAlert('Email not changed. Password required.', 'error');
+                            return;
+                        }
+                        // Re-authenticate
+                        const credential = window.firebase.EmailAuthProvider.credential(oldEmail, password);
+                        try {
+                            await window.firebase.reauthenticateWithCredential(user, credential);
+                            await window.firebase.updateEmail(user, newEmail);
+                            showAlert('Email updated in authentication system.', 'success');
+                        } catch (err) {
+                            showAlert('Failed to update email in authentication: ' + err.message, 'error');
+                            return;
+                        }
+                    }
+                    // Update in Firestore
+                    const userProfile = {
+                        email: newEmail,
+                        fullname: fullname,
+                        created: created,
+                        updated: new Date().toISOString()
+                    };
                     await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), userProfile);
+                    showAlert('Profile updated successfully!', 'success');
                 }
             } catch (error) {
                 console.error('Error saving user profile:', error);
