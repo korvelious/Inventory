@@ -1618,13 +1618,42 @@
             document.getElementById('edit-item-price').value = item.price;
             document.getElementById('edit-item-location').value = item.location || '';
             document.getElementById('edit-item-min-stock').value = item.minStock || 5;
-            // Show image preview if exists
-            const preview = document.getElementById('edit-image-preview');
-            if (item.image) {
-                preview.src = item.image;
-                preview.style.display = 'block';
-            } else {
-                preview.style.display = 'none';
+            document.getElementById('edit-item-tags').value = (item.tags && Array.isArray(item.tags)) ? item.tags.join(', ') : '';
+            updateTagChips('edit-item-tags', 'edit-tag-chips');
+            // Populate image gallery
+            const gallery = document.getElementById('edit-image-gallery');
+            gallery.innerHTML = '';
+            window.editImageFiles = [];
+            if (item.image && Array.isArray(item.image)) {
+                item.image.forEach((imgData, idx) => {
+                    const imgWrapper = document.createElement('div');
+                    imgWrapper.style.position = 'relative';
+                    imgWrapper.style.display = 'inline-block';
+                    const img = document.createElement('img');
+                    img.src = imgData;
+                    imgWrapper.appendChild(img);
+                    // Add X button
+                    const xBtn = document.createElement('button');
+                    xBtn.textContent = '✖';
+                    xBtn.className = 'delete-image-btn';
+                    xBtn.style.position = 'absolute';
+                    xBtn.style.top = '0';
+                    xBtn.style.right = '0';
+                    xBtn.style.background = 'rgba(220,53,69,0.8)';
+                    xBtn.style.color = '#fff';
+                    xBtn.style.border = 'none';
+                    xBtn.style.borderRadius = '50%';
+                    xBtn.style.width = '22px';
+                    xBtn.style.height = '22px';
+                    xBtn.style.cursor = 'pointer';
+                    xBtn.onclick = function(ev) {
+                        ev.preventDefault();
+                        item.image.splice(idx, 1);
+                        editItem(id); // re-render
+                    };
+                    imgWrapper.appendChild(xBtn);
+                    gallery.appendChild(imgWrapper);
+                });
             }
             document.getElementById('edit-modal').style.display = 'block';
         }
