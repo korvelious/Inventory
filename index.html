@@ -1605,7 +1605,10 @@
 
         function editItem(id) {
             const item = inventory.find(item => item.id === id);
-            if (!item) return;
+            if (!item) {
+                showAlert('Item not found for editing!', 'error');
+                return;
+            }
             document.getElementById('edit-item-id').value = item.id;
             document.getElementById('edit-item-name').value = item.name;
             document.getElementById('edit-item-barcode').value = item.barcode || '';
@@ -2690,6 +2693,9 @@
                 applyThemeColor(color);
             }
         });
+
+        // At the end of the script, attach editItem to window
+        window.editItem = editItem;
     </script>
 </body>
 </html> 
