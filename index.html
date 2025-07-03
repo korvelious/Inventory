@@ -724,11 +724,18 @@
             <h3>First Time Setup</h3>
             <p>Set up your username and password to secure your inventory system.</p>
             <form class="login-form" id="setup-form">
+                <label for="setup-email">Email Address</label>
                 <input type="email" id="setup-email" placeholder="Your Email Address" required>
+                <label for="setup-password">Password</label>
                 <input type="password" id="setup-password" placeholder="Choose Password" required>
+                <label for="setup-confirm-password">Confirm Password</label>
                 <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
                 <button type="submit" class="login-btn">Set Up Account</button>
             </form>
+        </div>
+        <!-- Add version text at the bottom of the login/setup page -->
+        <div id="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+          Version: 1.0.0 &mdash; Updated: 2024-06-09 12:00 UTC
         </div>
     </div>
 
@@ -1277,16 +1284,22 @@
 
         function setupAuthEventListeners() {
             // Login form
-            document.getElementById('login-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                login();
-            });
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    login();
+                });
+            }
 
             // Setup form
-            document.getElementById('setup-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                setupCredentials();
-            });
+            const setupForm = document.getElementById('setup-form');
+            if (setupForm) {
+                setupForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    setupCredentials();
+                });
+            }
 
             // Add event listener for password reset button
             const resetBtn = document.querySelector('#forgot-step-1 .btn.btn-primary');
@@ -2140,13 +2153,12 @@
                                     // If still fails, leave blank
                                 }
                             }
+                        } else {
+                            doc.setFontSize(10);
+                            doc.text(String(cell), colX + colIdx * 40, startY + rowIdx * rowHeight + 10);
                         }
-                    } else {
-                        doc.setFontSize(10);
-                        doc.text(String(cell), colX + colIdx * 40, startY + rowIdx * rowHeight + 10);
-                    }
+                    });
                 });
-            });
             doc.save('inventory_report.pdf');
         }
 
