@@ -254,13 +254,13 @@
         }
 
         .form-control, .form-control textarea {
-          width: 100%;
-          padding: 12px 15px;
-          border: 2px solid #e9ecef;
-          border-radius: 8px;
-          font-size: 1em;
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
           font-family: inherit;
-          transition: border-color 0.3s ease;
+            transition: border-color 0.3s ease;
         }
 
         .form-control:focus {
@@ -760,359 +760,390 @@
                     </div>
                     <button class="btn btn-primary" onclick="resetPassword()">Reset Password</button>
                 </div>
-            </div>
         </div>
+    </div>
 
     <!-- Main Application (Hidden until login) -->
     <div id="main-app" class="container hidden">
-        <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+      <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+      <div class="header">
+        <h1>📦 Inventory Management System</h1>
+        <p>Scan, Track, and Manage Your Inventory with Ease</p>
+      </div>
+      <div class="nav-tabs" id="main-nav-tabs">
+        <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
+        <button class="nav-tab" onclick="showTab('add-item')">➕ Add Item</button>
+        <button class="nav-tab" onclick="showTab('inventory')">📋 Inventory</button>
+        <button class="nav-tab" onclick="showTab('reports')">📄 Reports</button>
+        <button class="nav-tab" onclick="showTab('settings')">⚙️ Settings</button>
+        <!-- Admin tab will be injected by JS if user is admin -->
+      </div>
+      <!-- Tab contents below -->
+      <div id="dashboard" class="tab-content active">
+        <h2>Dashboard Overview</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3 id="total-items">0</h3>
+            <p>Total Items</p>
+          </div>
+          <div class="stat-card">
+            <h3 id="low-stock">0</h3>
+            <p>Low Stock Items</p>
+          </div>
+          <div class="stat-card">
+            <h3 id="total-value">$0</h3>
+            <p>Total Value</p>
+          </div>
+          <div class="stat-card">
+            <h3 id="categories">0</h3>
+            <p>Categories</p>
+          </div>
+        </div>
+
+        <div class="search-box">
+          <input type="text" id="dashboard-search" placeholder="Search inventory..." onkeyup="searchInventory(this.value)">
+        </div>
+
+        <div id="recent-items">
+          <h3>Recent Items</h3>
+          <table class="inventory-table">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Barcode</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recent-items-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="add-item" class="tab-content">
+        <h2>Add New Item</h2>
+        <form id="add-item-form">
+          <div class="form-group">
+            <label for="item-name">Item Name *</label>
+            <input type="text" id="item-name" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="item-barcode">Barcode</label>
+            <div class="barcode-input-group">
+            <input type="text" id="item-barcode" class="form-control" placeholder="Scan or enter barcode">
+              <button type="button" class="barcode-scan-btn" onclick="activateScanner()" title="Scan Barcode">
+                📷
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="item-description">Description</label>
+            <textarea id="item-description" class="form-control" rows="3"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="item-category">Category</label>
+            <select id="item-category" class="form-control">
+              <option value="">Select Category</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Clothing">Clothing</option>
+              <option value="Books">Books</option>
+              <option value="Food">Food</option>
+              <option value="Tools">Tools</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="item-quantity">Quantity *</label>
+            <input type="number" id="item-quantity" class="form-control" min="0" required inputmode="numeric">
+          </div>
+
+          <div class="form-group">
+            <label for="item-price">Price ($)</label>
+            <input type="number" id="item-price" class="form-control" min="0" step="0.01" inputmode="decimal">
+          </div>
+
+          <div class="form-group">
+            <label for="item-images">Item Images</label>
+            <input type="file" id="item-images" class="form-control" accept="image/*" multiple onchange="previewImages(this, 'add')">
+            <div id="add-image-gallery" class="image-gallery"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="item-location">Location</label>
+            <input type="text" id="item-location" class="form-control" placeholder="e.g., Warehouse A, Shelf 3">
+          </div>
+
+          <div class="form-group">
+            <label for="item-min-stock">Minimum Stock Level</label>
+            <input type="number" id="item-min-stock" class="form-control" min="0" value="5">
+          </div>
+
+          <div class="form-group">
+            <label for="item-tags">Tags</label>
+            <input type="text" id="item-tags" class="form-control" placeholder="Comma-separated tags (e.g. urgent, fragile)">
+            <div id="add-tag-chips" class="tag-chips"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Add Item</button>
+        </form>
+      </div>
+      <div id="inventory" class="tab-content">
+        <h2>Inventory List</h2>
+        <div class="search-box">
+          <input type="text" id="inventory-search" placeholder="Search by name, barcode, or category..." onkeyup="searchInventory(this.value)">
+        </div>
         
+        <table class="inventory-table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Barcode</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Category</th>
+              <th>Location</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-body">
+          </tbody>
+        </table>
+      </div>
+
+
+
+      <!-- Reports Tab -->
+      <div id="reports" class="tab-content">
+        <h2>Generate Reports</h2>
+        <div class="report-options">
+          <div class="checkbox-group">
+            <input type="checkbox" id="include-images" checked>
+            <label for="include-images">Include Images</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="include-barcodes" checked>
+            <label for="include-barcodes">Include Barcodes</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="include-prices" checked>
+            <label for="include-prices">Include Prices</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="include-locations" checked>
+            <label for="include-locations">Include Locations</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="report-type">Report Type</label>
+          <select id="report-type" class="form-control">
+            <option value="all">All Items</option>
+            <option value="low-stock">Low Stock Items</option>
+            <option value="category">By Category</option>
+            <option value="value">High Value Items</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="category-filter" style="display: none;">
+          <label for="report-category">Category</label>
+          <select id="report-category" class="form-control">
+          </select>
+        </div>
+
+        <!-- In Reports Tab, add Sort By dropdown and order toggle -->
+        <div class="form-group">
+          <label for="report-sort-by">Sort By</label>
+          <select id="report-sort-by" class="form-control">
+            <option value="name">Name</option>
+            <option value="quantity">Quantity</option>
+            <option value="price">Price</option>
+            <option value="category">Category</option>
+            <option value="dateAdded">Date Added</option>
+          </select>
+          <label style="margin-left:10px;">
+            <input type="checkbox" id="report-sort-desc"> Descending
+          </label>
+        </div>
+
+        <button class="btn btn-primary" onclick="generateReport()">Generate PDF Report</button>
+        <button class="btn btn-success" onclick="exportToCSV()">Export to CSV</button>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="settings" class="tab-content">
+        <h2>User Settings</h2>
+        
+        <div class="settings-section">
+          <h3>👤 Account Information</h3>
+          <div class="form-group">
+            <label for="current-username">Current Username</label>
+            <input type="text" id="current-username" class="form-control" readonly>
+          </div>
+          <div class="form-group">
+            <label for="user-email">Email Address</label>
+            <input type="email" id="user-email" class="form-control" placeholder="Enter your email" inputmode="email">
+          </div>
+          <div class="form-group">
+            <label for="user-fullname">Full Name</label>
+            <input type="text" id="user-fullname" class="form-control" placeholder="Enter your full name">
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>🔐 Change Password</h3>
+          <div class="form-group">
+            <label for="current-password">Current Password</label>
+            <input type="password" id="current-password" class="form-control" placeholder="Enter current password">
+          </div>
+          <div class="form-group">
+            <label for="new-password">New Password</label>
+            <input type="password" id="new-password" class="form-control" placeholder="Enter new password">
+          </div>
+          <div class="form-group">
+            <label for="confirm-new-password">Confirm New Password</label>
+            <input type="password" id="confirm-new-password" class="form-control" placeholder="Confirm new password">
+          </div>
+          <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎨 Appearance</h3>
+          <div class="form-group">
+            <label for="theme-select">Theme</label>
+            <select id="theme-select" class="form-control" onchange="changeTheme(this.value)">
+              <option value="default">Default Theme</option>
+              <option value="dark">Dark Mode</option>
+              <option value="light">Light Mode</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="language-select">Language</label>
+            <select id="theme-select" class="form-control">
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>📊 System Preferences</h3>
+          <div class="checkbox-group">
+            <input type="checkbox" id="auto-logout" checked>
+            <label for="auto-logout">Auto-logout after 24 hours</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="notifications" checked>
+            <label for="notifications">Show notifications</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="low-stock-alerts" checked>
+            <label for="low-stock-alerts">Low stock alerts</label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>�� Data Management</h3>
+          <button class="btn btn-success" onclick="exportUserData()">Export Complete Data</button>
+          <button class="btn btn-warning" onclick="importUserData()">Import Data</button>
+          <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+        </div>
+
+        <div class="settings-section">
+          <h3>📱 Multi-Device Setup</h3>
+          <p><strong>To use on another device:</strong></p>
+          <ol style="text-align: left; margin: 10px 0;">
+            <li>Export complete data from this device</li>
+            <li>Open inventory system on new device</li>
+            <li>Import the backup file</li>
+            <li>Login with your existing credentials</li>
+          </ol>
+          <button class="btn btn-primary" onclick="exportUserData()">Create Device Backup</button>
+        </div>
+
+        <div class="settings-section">
+          <h3>ℹ️ About</h3>
+          <p><strong>Version:</strong> 1.0.0</p>
+          <p><strong>Last Login:</strong> <span id="last-login">Never</span></p>
+          <p><strong>Total Items:</strong> <span id="total-items-settings">0</span></p>
+          <p><strong>Account Created:</strong> <span id="account-created">Unknown</span></p>
+        </div>
+
+        <!-- In the Settings Tab, add a Manage Categories section -->
+        <div class="settings-section">
+          <h3>📂 Manage Categories</h3>
+          <ul id="category-list"></ul>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <input type="text" id="new-category-input" class="form-control" placeholder="Add new category">
+            <button class="btn btn-success" onclick="addCategory()">Add</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎨 Branding</h3>
+          <div class="form-group">
+            <label for="branding-logo">Logo</label>
+            <input type="file" id="branding-logo" class="form-control" accept="image/*" onchange="previewBrandingLogo(this)">
+            <img id="branding-logo-preview" style="max-width:120px;display:none;">
+          </div>
+          <div class="form-group">
+            <label for="branding-color">Theme Color</label>
+            <input type="color" id="branding-color" class="form-control" value="#667eea" onchange="applyThemeColor(this.value)">
+          </div>
+          <button class="btn btn-primary" onclick="saveBranding()">Save Branding</button>
+        </div>
+
+        <!-- Update TSV Import Modal in Settings -->
+        <div id="tsv-import-modal" class="modal">
+          <div class="modal-content">
+            <span class="close" onclick="closeTSVImport()">&times;</span>
+            <h2>Import Items (TSV Paste)</h2>
+            <p>Paste your TSV data below. Each line should be:<br>
+            <code>Name [tab] Barcode [tab] Description [tab] Category [tab] Quantity [tab] Price [tab] Location [tab] MinStock [tab] Tags (comma-separated)</code></p>
+            <div style="margin-bottom:10px;">
+              <button class="btn btn-secondary" onclick="downloadTSVTemplate()">Download TSV Template</button>
+              <button class="btn btn-success" onclick="exportInventoryTSV()">Export Inventory as TSV</button>
+            </div>
+            <textarea id="tsv-import-textarea" class="form-control" rows="8" style="width:100%;font-family:monospace;"></textarea>
+            <button class="btn btn-primary" onclick="importTSVItems()">Import</button>
+            <div id="tsv-import-summary" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
+        <!-- Add Import TSV button to Settings tab -->
+        <div class="settings-section">
+          <h3>📥 Quick Import</h3>
+          <button class="btn btn-success" onclick="showTSVImport()">Import Items (TSV Paste)</button>
+        </div>
+      </div>
+      <div id="admin-dashboard" class="tab-content hidden">
+        <button class="logout-btn" onclick="logoutAdmin()">🚪 Logout</button>
         <div class="header">
-            <h1>📦 Inventory Management System</h1>
-            <p>Scan, Track, and Manage Your Inventory with Ease</p>
+          <h1>👤 Admin User Management</h1>
+          <p>View all signed up users</p>
         </div>
-
-        <div class="nav-tabs" id="main-nav-tabs">
-            <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
-            <button class="nav-tab" onclick="showTab('add-item')">➕ Add Item</button>
-            <button class="nav-tab" onclick="showTab('inventory')">📋 Inventory</button>
-            <button class="nav-tab" onclick="showTab('reports')">📄 Reports</button>
-            <button class="nav-tab" onclick="showTab('settings')">⚙️ Settings</button>
-            <!-- Admin tab will be injected by JS if user is admin -->
-        </div>
-
-        <!-- Dashboard Tab -->
-        <div id="dashboard" class="tab-content active">
-            <h2>Dashboard Overview</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3 id="total-items">0</h3>
-                    <p>Total Items</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="low-stock">0</h3>
-                    <p>Low Stock Items</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="total-value">$0</h3>
-                    <p>Total Value</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="categories">0</h3>
-                    <p>Categories</p>
-                </div>
-            </div>
-
-            <div class="search-box">
-                <input type="text" id="dashboard-search" placeholder="Search inventory..." onkeyup="searchInventory(this.value)">
-            </div>
-
-            <div id="recent-items">
-                <h3>Recent Items</h3>
-                <table class="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Image</th>
-                            <th>Name</th>
-                            <th>Barcode</th>
-                            <th>Quantity</th>
-                            <th>Price</th>
-                            <th>Category</th>
-                            <th>Location</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recent-items-body">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Add Item Tab -->
-        <div id="add-item" class="tab-content">
-            <h2>Add New Item</h2>
-            <form id="add-item-form">
-                <div class="form-group">
-                    <label for="item-name">Item Name *</label>
-                    <input type="text" id="item-name" class="form-control" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="item-barcode">Barcode</label>
-                    <div class="barcode-input-group">
-                    <input type="text" id="item-barcode" class="form-control" placeholder="Scan or enter barcode">
-                        <button type="button" class="barcode-scan-btn" onclick="activateScanner()" title="Scan Barcode">
-                            📷
-                        </button>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="item-description">Description</label>
-                    <textarea id="item-description" class="form-control" rows="3"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="item-category">Category</label>
-                    <select id="item-category" class="form-control">
-                        <option value="">Select Category</option>
-                        <option value="Electronics">Electronics</option>
-                        <option value="Clothing">Clothing</option>
-                        <option value="Books">Books</option>
-                        <option value="Food">Food</option>
-                        <option value="Tools">Tools</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="item-quantity">Quantity *</label>
-                    <input type="number" id="item-quantity" class="form-control" min="0" required inputmode="numeric">
-                </div>
-
-                <div class="form-group">
-                    <label for="item-price">Price ($)</label>
-                    <input type="number" id="item-price" class="form-control" min="0" step="0.01" inputmode="decimal">
-                </div>
-
-                <div class="form-group">
-                    <label for="item-images">Item Images</label>
-                    <input type="file" id="item-images" class="form-control" accept="image/*" multiple onchange="previewImages(this, 'add')">
-                    <div id="add-image-gallery" class="image-gallery"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="item-location">Location</label>
-                    <input type="text" id="item-location" class="form-control" placeholder="e.g., Warehouse A, Shelf 3">
-                </div>
-
-                <div class="form-group">
-                    <label for="item-min-stock">Minimum Stock Level</label>
-                    <input type="number" id="item-min-stock" class="form-control" min="0" value="5">
-                </div>
-
-                <div class="form-group">
-                    <label for="item-tags">Tags</label>
-                    <input type="text" id="item-tags" class="form-control" placeholder="Comma-separated tags (e.g. urgent, fragile)">
-                    <div id="add-tag-chips" class="tag-chips"></div>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Add Item</button>
-            </form>
-        </div>
-
-        <!-- Inventory Tab -->
-        <div id="inventory" class="tab-content">
-            <h2>Inventory List</h2>
-            <div class="search-box">
-                <input type="text" id="inventory-search" placeholder="Search by name, barcode, or category..." onkeyup="searchInventory(this.value)">
-            </div>
-            
-            <table class="inventory-table">
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Name</th>
-                        <th>Barcode</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Category</th>
-                        <th>Location</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="inventory-body">
-                </tbody>
-            </table>
-        </div>
-
-
-
-        <!-- Reports Tab -->
-        <div id="reports" class="tab-content">
-            <h2>Generate Reports</h2>
-            <div class="report-options">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="include-images" checked>
-                    <label for="include-images">Include Images</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="include-barcodes" checked>
-                    <label for="include-barcodes">Include Barcodes</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="include-prices" checked>
-                    <label for="include-prices">Include Prices</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="include-locations" checked>
-                    <label for="include-locations">Include Locations</label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="report-type">Report Type</label>
-                <select id="report-type" class="form-control">
-                    <option value="all">All Items</option>
-                    <option value="low-stock">Low Stock Items</option>
-                    <option value="category">By Category</option>
-                    <option value="value">High Value Items</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="category-filter" style="display: none;">
-                <label for="report-category">Category</label>
-                <select id="report-category" class="form-control">
-                </select>
-            </div>
-
-            <button class="btn btn-primary" onclick="generateReport()">Generate PDF Report</button>
-            <button class="btn btn-success" onclick="exportToCSV()">Export to CSV</button>
-        </div>
-
-        <!-- Settings Tab -->
-        <div id="settings" class="tab-content">
-            <h2>User Settings</h2>
-            
-            <div class="settings-section">
-                <h3>👤 Account Information</h3>
-                <div class="form-group">
-                    <label for="current-username">Current Username</label>
-                    <input type="text" id="current-username" class="form-control" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="user-email">Email Address</label>
-                    <input type="email" id="user-email" class="form-control" placeholder="Enter your email" inputmode="email">
-                </div>
-                <div class="form-group">
-                    <label for="user-fullname">Full Name</label>
-                    <input type="text" id="user-fullname" class="form-control" placeholder="Enter your full name">
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <h3>🔐 Change Password</h3>
-                <div class="form-group">
-                    <label for="current-password">Current Password</label>
-                    <input type="password" id="current-password" class="form-control" placeholder="Enter current password">
-                </div>
-                <div class="form-group">
-                    <label for="new-password">New Password</label>
-                    <input type="password" id="new-password" class="form-control" placeholder="Enter new password">
-                </div>
-                <div class="form-group">
-                    <label for="confirm-new-password">Confirm New Password</label>
-                    <input type="password" id="confirm-new-password" class="form-control" placeholder="Confirm new password">
-                </div>
-                <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
-            </div>
-
-            <div class="settings-section">
-                <h3>🎨 Appearance</h3>
-                <div class="form-group">
-                    <label for="theme-select">Theme</label>
-                    <select id="theme-select" class="form-control" onchange="changeTheme(this.value)">
-                        <option value="default">Default Theme</option>
-                        <option value="dark">Dark Mode</option>
-                        <option value="light">Light Mode</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="language-select">Language</label>
-                    <select id="theme-select" class="form-control">
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
-                        <option value="fr">Français</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <h3>📊 System Preferences</h3>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="auto-logout" checked>
-                    <label for="auto-logout">Auto-logout after 24 hours</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="notifications" checked>
-                    <label for="notifications">Show notifications</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="low-stock-alerts" checked>
-                    <label for="low-stock-alerts">Low stock alerts</label>
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <h3>💾 Data Management</h3>
-                <button class="btn btn-success" onclick="exportUserData()">Export Complete Data</button>
-                <button class="btn btn-warning" onclick="importUserData()">Import Data</button>
-                <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
-            </div>
-
-            <div class="settings-section">
-                <h3>📱 Multi-Device Setup</h3>
-                <p><strong>To use on another device:</strong></p>
-                <ol style="text-align: left; margin: 10px 0;">
-                    <li>Export complete data from this device</li>
-                    <li>Open inventory system on new device</li>
-                    <li>Import the backup file</li>
-                    <li>Login with your existing credentials</li>
-                </ol>
-                <button class="btn btn-primary" onclick="exportUserData()">Create Device Backup</button>
-            </div>
-
-            <div class="settings-section">
-                <h3>ℹ️ About</h3>
-                <p><strong>Version:</strong> 1.0.0</p>
-                <p><strong>Last Login:</strong> <span id="last-login">Never</span></p>
-                <p><strong>Total Items:</strong> <span id="total-items-settings">0</span></p>
-                <p><strong>Account Created:</strong> <span id="account-created">Unknown</span></p>
-            </div>
-
-            <!-- In the Settings Tab, add a Manage Categories section -->
-            <div class="settings-section">
-                <h3>📂 Manage Categories</h3>
-                <ul id="category-list"></ul>
-                <div style="display:flex;gap:8px;margin-top:10px;">
-                    <input type="text" id="new-category-input" class="form-control" placeholder="Add new category">
-                    <button class="btn btn-success" onclick="addCategory()">Add</button>
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <h3>🎨 Branding</h3>
-                <div class="form-group">
-                    <label for="branding-logo">Logo</label>
-                    <input type="file" id="branding-logo" class="form-control" accept="image/*" onchange="previewBrandingLogo(this)">
-                    <img id="branding-logo-preview" style="max-width:120px;display:none;">
-                </div>
-                <div class="form-group">
-                    <label for="branding-color">Theme Color</label>
-                    <input type="color" id="branding-color" class="form-control" value="#667eea" onchange="applyThemeColor(this.value)">
-                </div>
-                <button class="btn btn-primary" onclick="saveBranding()">Save Branding</button>
-            </div>
-
-            <!-- TSV Import Modal in Settings -->
-            <div id="tsv-import-modal" class="modal">
-              <div class="modal-content">
-                <span class="close" onclick="closeTSVImport()">&times;</span>
-                <h2>Import Items (TSV Paste)</h2>
-                <p>Paste your TSV data below. Each line should be:<br>
-                <code>Name [tab] Barcode [tab] Description [tab] Category [tab] Quantity [tab] Price [tab] Location [tab] MinStock [tab] Tags (comma-separated)</code></p>
-                <textarea id="tsv-import-textarea" class="form-control" rows="8" style="width:100%;font-family:monospace;"></textarea>
-                <button class="btn btn-primary" onclick="importTSVItems()">Import</button>
-                <div id="tsv-import-summary" style="margin-top:10px;"></div>
-              </div>
-            </div>
-
-            <!-- Add Import TSV button to Settings tab -->
-            <div class="settings-section">
-              <h3>📥 Quick Import</h3>
-              <button class="btn btn-success" onclick="showTSVImport()">Import Items (TSV Paste)</button>
-            </div>
-        </div>
+        <table class="inventory-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Created</th>
+              <th>Last IP</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-body"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Barcode Scanner Modal -->
@@ -1200,26 +1231,6 @@
         </div>
     </div>
 
-    <!-- Add Admin Dashboard -->
-    <div id="admin-dashboard" class="container hidden">
-      <button class="logout-btn" onclick="logoutAdmin()">🚪 Logout</button>
-      <div class="header">
-        <h1>👤 Admin User Management</h1>
-        <p>View all signed up users</p>
-      </div>
-      <table class="inventory-table">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Created</th>
-            <th>Last IP</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="admin-users-body"></tbody>
-      </table>
-    </div>
     <!-- User Details Modal -->
     <div id="user-details-modal" class="modal">
       <div class="modal-content">
@@ -1317,21 +1328,23 @@
                 // Create Firebase user account with real email
                 const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
                 const user = userCredential.user;
-                // Get IP
-                const ip = await getPublicIP();
+                // Get IP and location
+                const loc = await getPublicIPAndLocation();
                 // Store user profile in Firestore
                 const userProfile = {
-                    username: username,
+                username: username,
                     email: email,
                     created: new Date().toISOString(),
-                    lastIP: ip
+                    lastIP: loc.ip,
+                    lastCity: loc.city,
+                    lastState: loc.state
                 };
                 await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'users'), userProfile);
                 sendSignupEmail(username, password);
-                isAuthenticated = true;
-                currentUser = username;
+            isAuthenticated = true;
+            currentUser = username;
                 await showMainApp();
-                showAlert('Account created successfully! Welcome to your inventory system.', 'success');
+            showAlert('Account created successfully! Welcome to your inventory system.', 'success');
             } catch (error) {
                 console.error('Error creating account:', error);
                 if (error.code === 'auth/email-already-in-use') {
@@ -1357,9 +1370,9 @@
                     const userData = userDoc.data();
                     isAuthenticated = true;
                     currentUser = userData.username;
-                    // Save IP
-                    const ip = await getPublicIP();
-                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: ip });
+                    // Save IP and location
+                    const loc = await getPublicIPAndLocation();
+                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: loc.ip, lastCity: loc.city, lastState: loc.state });
                     // Create session
                     const session = {
                         username: userData.username,
@@ -1445,7 +1458,7 @@
               addForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 addItem();
-              });
+            });
             }
             eventListenersSetup = true;
           }
@@ -1453,20 +1466,20 @@
           const editForm = document.getElementById('edit-item-form');
           if (editForm) {
             editForm.onsubmit = function(e) {
-              e.preventDefault();
-              updateItem();
+                e.preventDefault();
+                updateItem();
             };
           }
           const reportType = document.getElementById('report-type');
           if (reportType) {
             reportType.addEventListener('change', function() {
-              const categoryFilter = document.getElementById('category-filter');
-              if (this.value === 'category') {
-                categoryFilter.style.display = 'block';
-                loadCategories();
-              } else {
-                categoryFilter.style.display = 'none';
-              }
+                const categoryFilter = document.getElementById('category-filter');
+                if (this.value === 'category') {
+                    categoryFilter.style.display = 'block';
+                    loadCategories();
+                } else {
+                    categoryFilter.style.display = 'none';
+                }
             });
           }
           const userEmail = document.getElementById('user-email');
@@ -1757,12 +1770,12 @@
             try {
                 console.log('updateItem called');
                 const id = document.getElementById('edit-item-id').value;
-                const name = document.getElementById('edit-item-name').value;
+            const name = document.getElementById('edit-item-name').value;
                 const barcode = document.getElementById('edit-item-barcode').value;
                 const description = document.getElementById('edit-item-description').value;
                 const category = document.getElementById('edit-item-category').value;
-                const quantity = parseInt(document.getElementById('edit-item-quantity').value);
-                const price = parseFloat(document.getElementById('edit-item-price').value) || 0;
+            const quantity = parseInt(document.getElementById('edit-item-quantity').value);
+            const price = parseFloat(document.getElementById('edit-item-price').value) || 0;
                 const location = document.getElementById('edit-item-location').value;
                 const minStock = parseInt(document.getElementById('edit-item-min-stock').value) || 5;
                 const tagsInput = document.getElementById('edit-item-tags');
@@ -2086,6 +2099,30 @@
                     break;
             }
 
+            // Sort by selected field and order
+            const sortBy = document.getElementById('report-sort-by').value;
+            const sortDesc = document.getElementById('report-sort-desc').checked;
+            filteredInventory.sort((a, b) => {
+                let valA = a[sortBy];
+                let valB = b[sortBy];
+                // Handle undefined/null
+                if (valA == null) valA = '';
+                if (valB == null) valB = '';
+                // For dateAdded, convert to Date
+                if (sortBy === 'dateAdded') {
+                    valA = new Date(valA);
+                    valB = new Date(valB);
+                }
+                // For quantity/price/minStock, compare as numbers
+                if (["quantity","price","minStock"].includes(sortBy)) {
+                    valA = Number(valA);
+                    valB = Number(valB);
+                }
+                if (valA < valB) return sortDesc ? 1 : -1;
+                if (valA > valB) return sortDesc ? -1 : 1;
+                return 0;
+            });
+
             // Table headers
             let columns = ['Name', 'Barcode', 'Quantity'];
             if (includeImages) columns.unshift('Image');
@@ -2132,7 +2169,7 @@
                         if (cell) {
                             try {
                                 doc.addImage(cell, 'JPEG', colX + colIdx * 40, startY + rowIdx * rowHeight, 14, 14);
-                            } catch (e) {
+                        } catch (e) {
                                 // If not JPEG, try PNG
                                 try {
                                     doc.addImage(cell, 'PNG', colX + colIdx * 40, startY + rowIdx * rowHeight, 14, 14);
@@ -2151,10 +2188,54 @@
         }
 
         function exportToCSV() {
+            const includeImages = document.getElementById('include-images').checked;
+            const includeBarcodes = document.getElementById('include-barcodes').checked;
+            const includePrices = document.getElementById('include-prices').checked;
+            const includeLocations = document.getElementById('include-locations').checked;
+            const reportType = document.getElementById('report-type').value;
+            let filteredInventory = [...inventory];
+
+            // Filter based on report type
+            switch (reportType) {
+                case 'low-stock':
+                    filteredInventory = inventory.filter(item => item.quantity <= item.minStock);
+                    break;
+                case 'category':
+                    const category = document.getElementById('report-category').value;
+                    if (category) {
+                        filteredInventory = inventory.filter(item => item.category === category);
+                    }
+                    break;
+                case 'value':
+                    filteredInventory = inventory.filter(item => item.price > 100);
+                    break;
+            }
+
+            // Sort by selected field and order
+            const sortBy = document.getElementById('report-sort-by').value;
+            const sortDesc = document.getElementById('report-sort-desc').checked;
+            filteredInventory.sort((a, b) => {
+                let valA = a[sortBy];
+                let valB = b[sortBy];
+                if (valA == null) valA = '';
+                if (valB == null) valB = '';
+                if (sortBy === 'dateAdded') {
+                    valA = new Date(valA);
+                    valB = new Date(valB);
+                }
+                if (["quantity","price","minStock"].includes(sortBy)) {
+                    valA = Number(valA);
+                    valB = Number(valB);
+                }
+                if (valA < valB) return sortDesc ? 1 : -1;
+                if (valA > valB) return sortDesc ? -1 : 1;
+                return 0;
+            });
+
             const headers = ['Name', 'Barcode', 'Description', 'Category', 'Quantity', 'Price', 'Location', 'Date Added'];
             const csvContent = [
                 headers.join(','),
-                ...inventory.map(item => [
+                ...filteredInventory.map(item => [
                     `"${item.name}"`,
                     `"${item.barcode || ''}"`,
                     `"${item.description || ''}"`,
@@ -2485,7 +2566,7 @@
                         }
                     }
                     // Update in Firestore
-                    const userProfile = {
+            const userProfile = {
                         email: newEmail,
                         fullname: fullname,
                         created: created,
@@ -2876,14 +2957,22 @@
         }
 
         function showAdminDashboard() {
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('main-app').style.display = 'none';
-          document.getElementById('admin-dashboard').classList.remove('hidden');
+          // Hide all tab contents
+          const tabContents = document.querySelectorAll('.tab-content');
+          tabContents.forEach(content => content.classList.remove('active'));
+          // Remove active class from all tabs
+          const tabs = document.querySelectorAll('.nav-tab');
+          tabs.forEach(tab => tab.classList.remove('active'));
+          // Show admin-dashboard tab content
+          document.getElementById('admin-dashboard').classList.add('active');
+          // Set Admin tab as active
+          const adminTab = document.getElementById('admin-nav-tab');
+          if (adminTab) adminTab.classList.add('active');
           loadAllUsers();
         }
         function logoutAdmin() {
-          document.getElementById('admin-dashboard').classList.add('hidden');
-          showLoginScreen();
+          document.getElementById('admin-dashboard').classList.remove('active');
+          showTab('dashboard');
         }
         async function loadAllUsers() {
           try {
@@ -2898,7 +2987,7 @@
                 <td>${user.username || ''}</td>
                 <td>${user.email || ''}</td>
                 <td>${user.created ? new Date(user.created).toLocaleString() : ''}</td>
-                <td>${user.lastIP || ''}</td>
+                <td>${user.lastIP || ''}<br><span style='font-size:0.9em;color:#555;'>${user.lastCity || ''}${user.lastCity && user.lastState ? ', ' : ''}${user.lastState || ''}</span></td>
                 <td>
                   <button class="btn btn-warning" onclick="adminLoginAsUser('${user.email}')" title="Login as User">Login</button>
                   <button class="btn btn-danger" onclick="deleteUser('${doc.id}')" title="Delete User">Delete</button>
@@ -3098,6 +3187,65 @@
           }
         }
         // ... existing code ...
+        function downloadTSVTemplate() {
+          const headers = [
+            'Name', 'Barcode', 'Description', 'Category', 'Quantity', 'Price', 'Location', 'MinStock', 'Tags'
+          ];
+          const tsv = headers.join('\t') + '\n';
+          const blob = new Blob([tsv], { type: 'text/tab-separated-values' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'inventory-template.tsv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+        function exportInventoryTSV() {
+          const headers = [
+            'Name', 'Barcode', 'Description', 'Category', 'Quantity', 'Price', 'Location', 'MinStock', 'Tags'
+          ];
+          let tsv = headers.join('\t') + '\n';
+          inventory.forEach(item => {
+            const row = [
+              item.name || '',
+              item.barcode || '',
+              item.description || '',
+              item.category || '',
+              item.quantity != null ? item.quantity : '',
+              item.price != null ? item.price : '',
+              item.location || '',
+              item.minStock != null ? item.minStock : '',
+              (item.tags && Array.isArray(item.tags)) ? item.tags.join(', ') : ''
+            ];
+            tsv += row.join('\t') + '\n';
+          });
+          const blob = new Blob([tsv], { type: 'text/tab-separated-values' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'inventory-export.tsv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+
+        // Utility to get public IP and geolocation
+        async function getPublicIPAndLocation() {
+          try {
+            const res = await fetch('https://ipapi.co/json/');
+            const data = await res.json();
+            return {
+              ip: data.ip || 'Unknown',
+              city: data.city || '',
+              state: data.region || ''
+            };
+          } catch {
+            return { ip: 'Unknown', city: '', state: '' };
+          }
+        }
     </script>
 </body>
 </html> 
