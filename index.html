@@ -1288,7 +1288,13 @@
             if (loginForm) {
                 loginForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    login();
+                    console.log('Login form submitted');
+                    try {
+                        login();
+                    } catch (err) {
+                        console.error('Login handler error:', err);
+                        showLoginError('A critical error occurred. See console for details.');
+                    }
                 });
             }
 
@@ -1297,7 +1303,13 @@
             if (setupForm) {
                 setupForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    setupCredentials();
+                    console.log('Signup form submitted');
+                    try {
+                        setupCredentials();
+                    } catch (err) {
+                        console.error('Signup handler error:', err);
+                        showAlert('A critical error occurred. See console for details.', 'error');
+                    }
                 });
             }
 
@@ -3174,6 +3186,12 @@
           const localString = versionDate.toLocaleString(undefined, options);
           const versionDateSpan = document.getElementById('version-date');
           if (versionDateSpan) versionDateSpan.textContent = localString;
+        });
+
+        // Global error handler
+        window.addEventListener('error', function(event) {
+            showAlert('A JavaScript error occurred: ' + event.message, 'error');
+            console.error('Global error:', event.error);
         });
     </script>
 </body>
