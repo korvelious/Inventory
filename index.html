@@ -718,9 +718,10 @@
             <input type="password" id="password" placeholder="Password" required>
             <button type="submit" class="login-btn">Login</button>
             <button type="button" class="btn-link" onclick="showForgotPassword()">Forgot Password?</button>
+            <button type="button" class="btn-link" onclick="showSignupForm()">Sign Up</button>
         </form>
         
-        <div class="setup-credentials" id="setup-credentials">
+        <div class="setup-credentials" id="setup-credentials" style="display:none;">
             <h3>First Time Setup</h3>
             <p>Set up your username and password to secure your inventory system.</p>
             <form class="login-form" id="setup-form">
@@ -733,6 +734,7 @@
                 <label for="setup-confirm-password">Confirm Password</label>
                 <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
                 <button type="submit" class="login-btn">Set Up Account</button>
+                <button type="button" class="btn-link" onclick="showLoginForm()">Back to Login</button>
             </form>
         </div>
         <!-- Add version text at the bottom of the login/setup page -->
@@ -833,6 +835,10 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Add version info to each main tab/page -->
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 — Updated: <span class="version-date"></span>
+            </div>
         </div>
 
         <!-- Add Item Tab -->
@@ -906,6 +912,10 @@
 
                 <button type="submit" class="btn btn-primary">Add Item</button>
             </form>
+            <!-- Add version info to each main tab/page -->
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 — Updated: <span class="version-date"></span>
+            </div>
         </div>
 
         <!-- Inventory Tab -->
@@ -931,6 +941,10 @@
                 <tbody id="inventory-body">
                 </tbody>
             </table>
+            <!-- Add version info to each main tab/page -->
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 — Updated: <span class="version-date"></span>
+            </div>
         </div>
 
 
@@ -975,6 +989,10 @@
 
             <button class="btn btn-primary" onclick="generateReport()">Generate PDF Report</button>
             <button class="btn btn-success" onclick="exportToCSV()">Export to CSV</button>
+            <!-- Add version info to each main tab/page -->
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 — Updated: <span class="version-date"></span>
+            </div>
         </div>
 
         <!-- Settings Tab -->
@@ -1123,6 +1141,10 @@
               <h3>📥 Quick Import</h3>
               <button class="btn btn-success" onclick="showTSVImport()">Import Items (TSV Paste)</button>
             </div>
+            <!-- Add version info to each main tab/page -->
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 — Updated: <span class="version-date"></span>
+            </div>
         </div>
     </div>
 
@@ -1230,6 +1252,10 @@
         </thead>
         <tbody id="admin-users-body"></tbody>
       </table>
+      <!-- Add version info to each main tab/page -->
+      <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+        Version: 1.0.0 — Updated: <span class="version-date"></span>
+      </div>
     </div>
     <!-- User Details Modal -->
     <div id="user-details-modal" class="modal">
@@ -1347,6 +1373,22 @@
             }
             if (!email || !email.includes('@')) {
                 showAlert('Please enter a valid email address!', 'error');
+                return;
+            }
+            // Check for duplicate username or email
+            const usersRef = window.firebase.collection(window.firebase.db, 'users');
+            // Check username
+            const qUsername = window.firebase.query(usersRef, window.firebase.where('username', '==', username));
+            const usernameSnapshot = await window.firebase.getDocs(qUsername);
+            if (!usernameSnapshot.empty) {
+                showAlert('Username is already taken. Please choose another.', 'error');
+                return;
+            }
+            // Check email
+            const qEmail = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
+            const emailSnapshot = await window.firebase.getDocs(qEmail);
+            if (!emailSnapshot.empty) {
+                showAlert('Email is already registered. Please use another or log in.', 'error');
                 return;
             }
             try {
@@ -3186,8 +3228,9 @@
             timeZoneName: 'short'
           };
           const localString = versionDate.toLocaleString(undefined, options);
-          const versionDateSpan = document.getElementById('version-date');
-          if (versionDateSpan) versionDateSpan.textContent = localString;
+          document.querySelectorAll('.version-date').forEach(el => {
+            el.textContent = localString;
+          });
         });
 
         // Global error handler
@@ -3195,6 +3238,16 @@
             showAlert('A JavaScript error occurred: ' + event.message, 'error');
             console.error('Global error:', event.error);
         });
+
+        // Add Sign Up button to login form
+        function showSignupForm() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('setup-credentials').style.display = 'block';
+        }
+        function showLoginForm() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('setup-credentials').style.display = 'none';
+        }
     </script>
 </body>
 </html> 
