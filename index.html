@@ -2819,7 +2819,7 @@
                 <td>${user.created ? new Date(user.created).toLocaleString() : ''}</td>
                 <td>${user.lastIP || ''}</td>
                 <td>
-                  <button class="btn btn-warning" onclick="showUserDetails('${doc.id}')" title="View Details">Details</button>
+                  <button class="btn btn-warning" onclick="adminLoginAsUser('${user.email}')" title="Login as User">Login</button>
                   <button class="btn btn-danger" onclick="deleteUser('${doc.id}')" title="Delete User">Delete</button>
                 </td>
               `;
@@ -2910,6 +2910,7 @@
           const existing = document.getElementById('admin-nav-tab');
           if (existing) existing.remove();
           if (currentUser === 'admin') {
+            // Insert Admin tab before the last tab (Settings)
             const btn = document.createElement('button');
             btn.className = 'nav-tab';
             btn.id = 'admin-nav-tab';
@@ -2920,8 +2921,45 @@
               document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
               btn.classList.add('active');
             };
-            navTabs.appendChild(btn);
+            // Insert before the last tab (Settings)
+            const settingsTab = navTabs.querySelector('button.nav-tab:last-child');
+            navTabs.insertBefore(btn, settingsTab);
+          }
+        }
+
+        // Add adminLoginAsUser function
+        async function adminLoginAsUser(email) {
+          const password = prompt('Enter the password for this user to log in as them:');
+          if (!password) return;
+          try {
+            const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
+            const user = userCredential.user;
+            // Get user profile from Firestore
+            const usersRef = window.firebase.collection(window.firebase.db, 'users');
+            const q = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
+            const querySnapshot = await window.firebase.getDocs(q);
+            if (!querySnapshot.empty) {
+              const userDoc = querySnapshot.docs[0];
+              const userData = userDoc.data();
+              isAuthenticated = true;
+              currentUser = userData.username;
+              // Save IP
+              const ip = await getPublicIP();
+              await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: ip });
+              // Create session
+              const session = {
+                username: userData.username,
+                timestamp: Date.now()
+              };
+              localStorage.setItem('inventory_session', JSON.stringify(session));
+              await showMainApp();
+              showAlert('Logged in as ' + userData.username, 'success');
+            } else {
+              showLoginError('User profile not found!');
             }
+          } catch (error) {
+            showAlert('Login as user failed: ' + error.message, 'error');
+          }
         }
     </script>
 </body>
