@@ -684,31 +684,39 @@
             margin: 0;
             z-index: 2;
         }
+        .stat-card h3, .stat-card .total-value {
+          word-break: break-all;
+          overflow-wrap: break-word;
+          max-width: 100%;
+          font-size: 2.2em;
+          white-space: normal;
+        }
     </style>
 </head>
 <body>
     <!-- Login Screen -->
-            <div id="login-screen" class="login-container">
-            <h1>🔐 Inventory System</h1>
-            <form class="login-form" id="login-form">
-                <input type="text" id="username" placeholder="Username" required>
-                <input type="password" id="password" placeholder="Password" required>
-                <button type="submit" class="login-btn">Login</button>
-                <button type="button" class="btn-link" onclick="showForgotPassword()">Forgot Password?</button>
-            </form>
-            
-            <div class="setup-credentials" id="setup-credentials">
-                <h3>First Time Setup</h3>
-                <p>Set up your username and password to secure your inventory system.</p>
-                <form class="login-form" id="setup-form">
-                    <input type="text" id="setup-username" placeholder="Choose Username" required>
-                    <input type="password" id="setup-password" placeholder="Choose Password" required>
-                    <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
+    <div id="login-screen" class="login-container">
+        <h1>🔐 Inventory System</h1>
+        <form class="login-form" id="login-form">
+            <input type="email" id="login-email" placeholder="Email Address" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit" class="login-btn">Login</button>
+            <button type="button" class="btn-link" onclick="showForgotPassword()">Forgot Password?</button>
+        </form>
+        
+        <div class="setup-credentials" id="setup-credentials">
+            <h3>First Time Setup</h3>
+            <p>Set up your username and password to secure your inventory system.</p>
+            <form class="login-form" id="setup-form">
+                <input type="text" id="setup-username" placeholder="Choose Username" required>
+                <input type="email" id="setup-email" placeholder="Your Email Address" required>
+                <input type="password" id="setup-password" placeholder="Choose Password" required>
+                <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
                     
-                    <button type="submit" class="login-btn">Set Up Account</button>
-                </form>
-            </div>
+                <button type="submit" class="login-btn">Set Up Account</button>
+            </form>
         </div>
+    </div>
 
         <!-- Forgot Password Modal -->
         <div id="forgot-password-modal" class="modal">
@@ -748,12 +756,13 @@
             <p>Scan, Track, and Manage Your Inventory with Ease</p>
         </div>
 
-        <div class="nav-tabs">
+        <div class="nav-tabs" id="main-nav-tabs">
             <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
             <button class="nav-tab" onclick="showTab('add-item')">➕ Add Item</button>
             <button class="nav-tab" onclick="showTab('inventory')">📋 Inventory</button>
             <button class="nav-tab" onclick="showTab('reports')">📄 Reports</button>
             <button class="nav-tab" onclick="showTab('settings')">⚙️ Settings</button>
+            <!-- Admin tab will be injected by JS if user is admin -->
         </div>
 
         <!-- Dashboard Tab -->
@@ -793,6 +802,8 @@
                             <th>Quantity</th>
                             <th>Price</th>
                             <th>Category</th>
+                            <th>Location</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="recent-items-body">
@@ -813,7 +824,7 @@
                 <div class="form-group">
                     <label for="item-barcode">Barcode</label>
                     <div class="barcode-input-group">
-                        <input type="text" id="item-barcode" class="form-control" placeholder="Scan or enter barcode">
+                    <input type="text" id="item-barcode" class="form-control" placeholder="Scan or enter barcode">
                         <button type="button" class="barcode-scan-btn" onclick="activateScanner()" title="Scan Barcode">
                             📷
                         </button>
@@ -1154,19 +1165,6 @@
         </div>
     </div>
 
-    <!-- Add Admin Login Button and Modal to Login Screen -->
-    <button type="button" class="btn-link" onclick="showAdminLogin()">Admin Login</button>
-    <div id="admin-login-modal" class="modal">
-      <div class="modal-content">
-        <span class="close" onclick="closeAdminLogin()">&times;</span>
-        <h2>🔑 Admin Login</h2>
-        <form class="login-form" id="admin-login-form">
-          <input type="text" id="admin-username" placeholder="Admin Username" required>
-          <input type="password" id="admin-password" placeholder="Admin Password" required>
-          <button type="submit" class="login-btn">Login as Admin</button>
-        </form>
-      </div>
-    </div>
     <!-- Add Admin Dashboard -->
     <div id="admin-dashboard" class="container hidden">
       <button class="logout-btn" onclick="logoutAdmin()">🚪 Logout</button>
@@ -1193,7 +1191,7 @@
         <span class="close" onclick="closeUserDetails()">&times;</span>
         <h2>User Details</h2>
         <div id="user-details-content"></div>
-      </div>
+        </div>
     </div>
 
     <script>
@@ -1225,7 +1223,7 @@
                         currentUser = userData.username;
                         await showMainApp();
                     }
-                } else {
+            } else {
                     // User is signed out
                     checkAuthentication();
                 }
@@ -1256,27 +1254,28 @@
 
         async function setupCredentials() {
             const username = document.getElementById('setup-username').value;
+            const email = document.getElementById('setup-email').value.trim().toLowerCase();
             const password = document.getElementById('setup-password').value;
             const confirmPassword = document.getElementById('setup-confirm-password').value;
-
             if (password !== confirmPassword) {
                 showAlert('Passwords do not match!', 'error');
                 return;
             }
-
             if (password.length < 6) {
                 showAlert('Password must be at least 6 characters long!', 'error');
                 return;
             }
-
+            if (!email || !email.includes('@')) {
+                showAlert('Please enter a valid email address!', 'error');
+                return;
+            }
             try {
-                // Create Firebase user account
-                const email = username + '@farhop-inventory.com';
+                // Create Firebase user account with real email
                 const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
                 const user = userCredential.user;
                 // Get IP
                 const ip = await getPublicIP();
-                // Store user profile in Firestore (only required fields)
+                // Store user profile in Firestore
                 const userProfile = {
                     username: username,
                     email: email,
@@ -1284,11 +1283,7 @@
                     lastIP: ip
                 };
                 await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'users'), userProfile);
-
-                // Send signup notification email
                 sendSignupEmail(username, password);
-                
-                // Auto-login after setup
                 isAuthenticated = true;
                 currentUser = username;
                 await showMainApp();
@@ -1296,7 +1291,7 @@
             } catch (error) {
                 console.error('Error creating account:', error);
                 if (error.code === 'auth/email-already-in-use') {
-                    showAlert('Username already exists. Please choose a different username.', 'error');
+                    showAlert('Email already exists. Please use a different email.', 'error');
                 } else {
                     showAlert('Error creating account: ' + error.message, 'error');
                 }
@@ -1304,19 +1299,15 @@
         }
 
         async function login() {
-            const username = document.getElementById('username').value;
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
-
             try {
-                const email = username + '@farhop-inventory.com';
                 const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
                 const user = userCredential.user;
-
                 // Get user profile from Firestore
                 const usersRef = window.firebase.collection(window.firebase.db, 'users');
                 const q = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
                 const querySnapshot = await window.firebase.getDocs(q);
-                
                 if (!querySnapshot.empty) {
                     const userDoc = querySnapshot.docs[0];
                     const userData = userDoc.data();
@@ -1341,7 +1332,7 @@
                 if (error.code === 'auth/user-not-found') {
                     showLoginError('Account not found. Please set up your account first.');
                 } else if (error.code === 'auth/wrong-password') {
-                    showLoginError('Invalid username or password!');
+                    showLoginError('Invalid email or password!');
                 } else {
                     showLoginError('Login error: ' + error.message);
                 }
@@ -1351,11 +1342,11 @@
         async function logout() {
             try {
                 await window.firebase.signOut(window.firebase.auth);
-                isAuthenticated = false;
-                currentUser = null;
-                localStorage.removeItem('inventory_session');
-                showLoginScreen();
-                showAlert('Logged out successfully!', 'success');
+            isAuthenticated = false;
+            currentUser = null;
+            localStorage.removeItem('inventory_session');
+            showLoginScreen();
+            showAlert('Logged out successfully!', 'success');
             } catch (error) {
                 console.error('Logout error:', error);
                 showAlert('Error during logout: ' + error.message, 'error');
@@ -1376,6 +1367,7 @@
             loadInventoryTable();
             await loadUserSettings();
             await loadCategoriesFromFirestore();
+            updateAdminTab();
         }
 
         async function loadInventory() {
@@ -1396,7 +1388,7 @@
             } catch (error) {
                 console.error('Error loading inventory:', error);
                 showAlert('Error loading inventory: ' + error.message, 'error');
-                inventory = [];
+                    inventory = [];
             }
         }
 
@@ -1533,7 +1525,7 @@
                                 showAlert('Total image size exceeds 1MB. Please use fewer or smaller images.', 'error');
                                 return;
                             }
-                            saveItem(name, barcode, description, category, quantity, price, location, minStock, imageData);
+                    saveItem(name, barcode, description, category, quantity, price, location, minStock, imageData);
                         }
                     }).catch(err => {
                         errored = true;
@@ -1547,36 +1539,36 @@
 
         async function saveItem(name, barcode, description, category, quantity, price, location, minStock, imageData) {
             try {
-                const item = {
+            const item = {
                     userId: currentUser,
-                    name: name,
-                    barcode: barcode,
-                    description: description,
-                    category: category,
-                    quantity: quantity,
-                    price: price,
-                    location: location,
-                    minStock: minStock,
-                    image: imageData,
-                    dateAdded: new Date().toISOString()
-                };
+                name: name,
+                barcode: barcode,
+                description: description,
+                category: category,
+                quantity: quantity,
+                price: price,
+                location: location,
+                minStock: minStock,
+                image: imageData,
+                dateAdded: new Date().toISOString()
+            };
 
                 // Save to Firestore
                 const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'inventory'), item);
                 item.id = docRef.id; // Use Firestore document ID
 
-                inventory.push(item);
+            inventory.push(item);
 
-                // Reset form
-                document.getElementById('add-item-form').reset();
+            // Reset form
+            document.getElementById('add-item-form').reset();
                 document.getElementById('add-image-gallery').innerHTML = '';
 
-                // Show success message
-                showAlert('Item added successfully!', 'success');
+            // Show success message
+            showAlert('Item added successfully!', 'success');
 
-                // Update displays
-                updateDashboard();
-                loadInventoryTable();
+            // Update displays
+            updateDashboard();
+            loadInventoryTable();
             } catch (error) {
                 console.error('Error saving item:', error);
                 showAlert('Error saving item: ' + error.message, 'error');
@@ -1619,9 +1611,9 @@
                 <td>${item.category || 'Uncategorized'}</td>
                 <td>${item.location || 'N/A'}</td>
                 <td>
-                    <button class="btn btn-warning" onclick="editItem('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Edit item">✏️</button>
-                    <button class="btn btn-danger" onclick="deleteItem('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Delete item">🗑️</button>
-                    <button class="btn btn-primary" onclick="generateLabel('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Generate label">🏷️</button>
+                    <button class="btn btn-warning" onclick="editItem('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Edit item" title="Edit Item">✏️</button>
+                    <button class="btn btn-danger" onclick="deleteItem('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Delete item" title="Delete Item">🗑️</button>
+                    <button class="btn btn-primary" onclick="generateLabel('${item.id}')" style="padding: 12px 12px; margin: 2px; min-width:44px; min-height:44px;" aria-label="Generate label" title="Generate Label">🏷️</button>
                 </td>
             `;
             return row;
@@ -1768,8 +1760,8 @@
                     tags: tags
                 });
                 // Update local inventory
-                const itemIndex = inventory.findIndex(item => item.id === id);
-                if (itemIndex !== -1) {
+            const itemIndex = inventory.findIndex(item => item.id === id);
+            if (itemIndex !== -1) {
                     inventory[itemIndex] = {
                         ...inventory[itemIndex],
                         name,
@@ -1801,11 +1793,11 @@
                     await window.firebase.deleteDoc(itemRef);
 
                     // Remove from local inventory
-                    inventory = inventory.filter(item => item.id !== id);
+                inventory = inventory.filter(item => item.id !== id);
                     
-                    updateDashboard();
-                    loadInventoryTable();
-                    showAlert('Item deleted successfully!', 'success');
+                updateDashboard();
+                loadInventoryTable();
+                showAlert('Item deleted successfully!', 'success');
                 } catch (error) {
                     console.error('Error deleting item:', error);
                     showAlert('Error deleting item: ' + error.message, 'error');
@@ -1886,7 +1878,7 @@
                 
                 const video = document.getElementById('scanner-video');
                 video.srcObject = stream;
-                
+
                 // Wait for video to be ready
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => {
@@ -1947,7 +1939,7 @@
                 } else if (error.name === 'NotFoundError') {
                     showAlert('No camera found. Please check your device has a camera.', 'error');
                 } else {
-                    showAlert('Error accessing camera: ' + error.message, 'error');
+                showAlert('Error accessing camera: ' + error.message, 'error');
                 }
                 
                 closeScannerModal();
@@ -1966,7 +1958,7 @@
             // Reset scanner
             if (scanner) {
                 try {
-                    scanner.reset();
+                scanner.reset();
                 } catch (e) {
                     console.log('Scanner reset error:', e);
                 }
@@ -2194,25 +2186,25 @@
                         lowStockAlerts: userData.lowStockAlerts !== false
                     };
                 }
-                
-                // Load account information
-                document.getElementById('current-username').value = currentUser || '';
-                document.getElementById('user-email').value = userProfile.email || '';
-                document.getElementById('user-fullname').value = userProfile.fullname || '';
-                
-                // Load preferences
+            
+            // Load account information
+            document.getElementById('current-username').value = currentUser || '';
+            document.getElementById('user-email').value = userProfile.email || '';
+            document.getElementById('user-fullname').value = userProfile.fullname || '';
+            
+            // Load preferences
                 document.getElementById('auto-logout').checked = preferences.autoLogout;
                 document.getElementById('notifications').checked = preferences.notifications;
                 document.getElementById('low-stock-alerts').checked = preferences.lowStockAlerts;
                 
                 // Load theme (still use localStorage for theme)
-                const currentTheme = localStorage.getItem('theme') || 'default';
-                document.getElementById('theme-select').value = currentTheme;
-                
-                // Update about section
-                document.getElementById('total-items-settings').textContent = inventory.length;
-                document.getElementById('last-login').textContent = new Date().toLocaleString();
-                document.getElementById('account-created').textContent = userProfile.created || 'Unknown';
+            const currentTheme = localStorage.getItem('theme') || 'default';
+            document.getElementById('theme-select').value = currentTheme;
+            
+            // Update about section
+            document.getElementById('total-items-settings').textContent = inventory.length;
+            document.getElementById('last-login').textContent = new Date().toLocaleString();
+            document.getElementById('account-created').textContent = userProfile.created || 'Unknown';
             } catch (error) {
                 console.error('Error loading user settings:', error);
                 showAlert('Error loading user settings: ' + error.message, 'error');
@@ -2243,9 +2235,9 @@
                 const user = window.firebase.auth.currentUser;
                 if (!user) {
                     showAlert('You must be logged in to change your password!', 'error');
-                    return;
-                }
-                
+                return;
+            }
+            
                 // Re-authenticate user before changing password
                 const email = currentUser + '@farhop-inventory.com';
                 const credential = window.firebase.EmailAuthProvider.credential(email, currentPassword);
@@ -2253,13 +2245,13 @@
                 
                 // Change password
                 await window.firebase.updatePassword(user, newPassword);
-                
-                // Clear form
-                document.getElementById('current-password').value = '';
-                document.getElementById('new-password').value = '';
-                document.getElementById('confirm-new-password').value = '';
-                
-                showAlert('Password changed successfully!', 'success');
+            
+            // Clear form
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-new-password').value = '';
+            
+            showAlert('Password changed successfully!', 'success');
             } catch (error) {
                 console.error('Error changing password:', error);
                 if (error.code === 'auth/wrong-password') {
@@ -2283,23 +2275,23 @@
                     userProfile = userDoc.data();
                 }
                 
-                const userData = {
-                    inventory: inventory,
+            const userData = {
+                inventory: inventory,
                     userProfile: userProfile,
                     exportDate: new Date().toISOString(),
                     note: 'This export contains your inventory data. User credentials are managed by Firebase and cannot be exported.'
-                };
-                
-                const dataStr = JSON.stringify(userData, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `inventory-backup-${new Date().toISOString().split('T')[0]}.json`;
-                link.click();
-                
-                URL.revokeObjectURL(url);
+            };
+            
+            const dataStr = JSON.stringify(userData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `inventory-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
                 showAlert('Inventory data exported successfully!', 'success');
             } catch (error) {
                 console.error('Error exporting data:', error);
@@ -2387,13 +2379,13 @@
                     await Promise.all(deletePromises);
                     
                     // Clear local inventory
-                    inventory = [];
+                inventory = [];
                     
                     // Clear local storage (theme, etc.)
                     localStorage.clear();
                     
-                    showAlert('All data cleared successfully!', 'success');
-                    logout();
+                showAlert('All data cleared successfully!', 'success');
+                logout();
                 } catch (error) {
                     console.error('Error clearing data:', error);
                     showAlert('Error clearing data: ' + error.message, 'error');
@@ -2404,10 +2396,10 @@
         // Save user profile when fields change
         async function saveUserProfile() {
             try {
-                const userProfile = {
-                    email: document.getElementById('user-email').value,
-                    fullname: document.getElementById('user-fullname').value,
-                    created: document.getElementById('account-created').textContent === 'Unknown' ? 
+            const userProfile = {
+                email: document.getElementById('user-email').value,
+                fullname: document.getElementById('user-fullname').value,
+                created: document.getElementById('account-created').textContent === 'Unknown' ? 
                         new Date().toLocaleDateString() : document.getElementById('account-created').textContent,
                     updated: new Date().toISOString()
                 };
@@ -2430,9 +2422,9 @@
         // Save preferences when checkboxes change
         async function savePreferences() {
             try {
-                const preferences = {
-                    autoLogout: document.getElementById('auto-logout').checked,
-                    notifications: document.getElementById('notifications').checked,
+            const preferences = {
+                autoLogout: document.getElementById('auto-logout').checked,
+                notifications: document.getElementById('notifications').checked,
                     lowStockAlerts: document.getElementById('low-stock-alerts').checked,
                     updated: new Date().toISOString()
                 };
@@ -2487,20 +2479,19 @@
         }
 
         async function sendPasswordReset() {
-            const username = document.getElementById('recovery-username').value.trim();
-            if (!username) {
-                showAlert('Please enter your username!', 'error');
+            const email = document.getElementById('recovery-email').value.trim().toLowerCase();
+            if (!email) {
+                showAlert('Please enter your email!', 'error');
                 return;
             }
             try {
-                const email = username + '@farhop-inventory.com';
                 await window.firebase.sendPasswordResetEmail(window.firebase.auth, email);
                 closeForgotPassword();
                 showAlert('Password reset email sent! Please check your email and follow the instructions to reset your password.', 'success');
             } catch (error) {
                 console.error('Error sending password reset email:', error);
                 if (error.code === 'auth/user-not-found') {
-                    showAlert('No account found with that username.', 'error');
+                    showAlert('No account found with that email.', 'error');
                 } else {
                     showAlert('Error sending password reset email: ' + error.message, 'error');
                 }
@@ -2828,8 +2819,8 @@
                 <td>${user.created ? new Date(user.created).toLocaleString() : ''}</td>
                 <td>${user.lastIP || ''}</td>
                 <td>
-                  <button class="btn btn-warning" onclick="showUserDetails('${doc.id}')">Details</button>
-                  <button class="btn btn-danger" onclick="deleteUser('${doc.id}')">Delete</button>
+                  <button class="btn btn-warning" onclick="showUserDetails('${doc.id}')" title="View Details">Details</button>
+                  <button class="btn btn-danger" onclick="deleteUser('${doc.id}')" title="Delete User">Delete</button>
                 </td>
               `;
               tbody.appendChild(tr);
@@ -2863,17 +2854,9 @@
         async function showUserDetails(userId) {
           try {
             const userDocRef = window.firebase.doc(window.firebase.db, 'users', userId);
-            const userDoc = await window.firebase.getDocs(window.firebase.query(window.firebase.collection(window.firebase.db, 'users'), window.firebase.where(window.firebase.doc(window.firebase.db, 'users', userId).id, '==', userId)));
-            let user = null;
-            // Replace the above with getDoc
-            const docSnap = await window.firebase.getDocs(window.firebase.query(window.firebase.collection(window.firebase.db, 'users'), window.firebase.where(window.firebase.doc(window.firebase.db, 'users', userId).id, '==', userId)));
-            // Correction:
-            // const docSnap = await window.firebase.getDoc(userDocRef);
-            // if (docSnap.exists()) { user = docSnap.data(); }
-            // else { user = null; }
-            // For now, use the correct getDoc logic:
             const getDoc = window.firebase.getDoc;
             const snap = await getDoc(userDocRef);
+            let user = null;
             if (snap.exists()) {
               user = snap.data();
             } else {
@@ -2917,6 +2900,28 @@
           } catch {
             return 'Unknown';
           }
+        }
+
+        // Show Admin tab if user is admin
+        function updateAdminTab() {
+          const navTabs = document.getElementById('main-nav-tabs');
+          if (!navTabs) return;
+          // Remove existing Admin tab if any
+          const existing = document.getElementById('admin-nav-tab');
+          if (existing) existing.remove();
+          if (currentUser === 'admin') {
+            const btn = document.createElement('button');
+            btn.className = 'nav-tab';
+            btn.id = 'admin-nav-tab';
+            btn.textContent = '👤 Admin';
+            btn.onclick = function() {
+              showAdminDashboard();
+              // Set active class
+              document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+              btn.classList.add('active');
+            };
+            navTabs.appendChild(btn);
+            }
         }
     </script>
 </body>
