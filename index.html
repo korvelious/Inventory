@@ -1581,8 +1581,8 @@
                 const codeReader = new ZXing.BrowserMultiFormatReader();
                 
                 // Configure scanner for better iPhone performance
-                codeReader.hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-                codeReader.hints.set(ZXing.DecodeHintType.PURE_BARCODE, false);
+                // codeReader.hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+                // codeReader.hints.set(ZXing.DecodeHintType.PURE_BARCODE, false);
                 
                 codeReader.decodeFromVideoDevice(null, 'scanner-video', (result, err) => {
                     console.log('Scanner callback - result:', result, 'error:', err);
