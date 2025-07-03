@@ -1415,8 +1415,8 @@
                 <td>${item.category || 'Uncategorized'}</td>
                 <td>${item.location || 'N/A'}</td>
                 <td>
-                    <button class="btn btn-warning" onclick="editItem(${item.id})" style="padding: 5px 10px; margin: 2px;">✏️</button>
-                    <button class="btn btn-danger" onclick="deleteItem(${item.id})" style="padding: 5px 10px; margin: 2px;">🗑️</button>
+                    <button class="btn btn-warning" onclick="editItem('${item.id}')" style="padding: 5px 10px; margin: 2px;">✏️</button>
+                    <button class="btn btn-danger" onclick="deleteItem('${item.id}')" style="padding: 5px 10px; margin: 2px;">🗑️</button>
                 </td>
             `;
             return row;
