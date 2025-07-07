@@ -2204,10 +2204,46 @@
                     isAuthenticated = true;
                     currentUser = userData.username;
                     currentUserData = userData;
-                    currentCompany = userData.companyId;
-                    userRole = userData.role || 'viewer';
-                    isAdmin = userData.role === 'admin';
-                    userPermissions = userData.permissions || ROLES[userRole]?.permissions || [];
+                    
+                    // Handle existing users without companyId (legacy support)
+                    if (!userData.companyId) {
+                        console.log('Legacy user detected, creating company structure...');
+                        // Create a company for this legacy user
+                        const companyData = {
+                            name: userData.username + "'s Company",
+                            created: new Date().toISOString(),
+                            createdBy: userData.email,
+                            status: 'active',
+                            plan: 'basic',
+                            isLegacy: true
+                        };
+                        const companyRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'companies'), companyData);
+                        const companyId = companyRef.id;
+                        
+                        // Update user with company info and admin role
+                        await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), {
+                            companyId: companyId,
+                            companyName: companyData.name,
+                            role: 'admin',
+                            permissions: ROLES.admin.permissions,
+                            status: 'active'
+                        });
+                        
+                        currentCompany = companyId;
+                        userRole = 'admin';
+                        isAdmin = true;
+                        userPermissions = ROLES.admin.permissions;
+                        
+                        // Show migration notification
+                        setTimeout(() => {
+                            showAlert('Welcome! Your account has been upgraded to support team collaboration. You are now the admin of your company.', 'success');
+                        }, 2000);
+                    } else {
+                        currentCompany = userData.companyId;
+                        userRole = userData.role || 'viewer';
+                        isAdmin = userData.role === 'admin';
+                        userPermissions = userData.permissions || ROLES[userRole]?.permissions || [];
+                    }
                     
                     // Save IP
                     const ip = await getPublicIP();
@@ -2282,9 +2318,29 @@
         async function loadInventory() {
             try {
                 const inventoryRef = window.firebase.collection(window.firebase.db, 'inventory');
-                const q = window.firebase.query(inventoryRef, window.firebase.where('companyId', '==', currentCompany));
+                let q;
+                
+                if (currentCompany) {
+                    // Use company-based filtering for new multi-user setup
+                    q = window.firebase.query(inventoryRef, window.firebase.where('companyId', '==', currentCompany));
+                } else {
+                    // Fallback to user-based filtering for legacy data
+                    q = window.firebase.query(inventoryRef, window.firebase.where('userId', '==', currentUser));
+                }
+                
                 const querySnapshot = await window.firebase.getDocs(q);
                 inventory = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Migrate legacy inventory items to include companyId
+                if (currentCompany) {
+                    for (const item of inventory) {
+                        if (!item.companyId && item.userId === currentUser) {
+                            await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'inventory', item.id), {
+                                companyId: currentCompany
+                            });
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error loading inventory:', error);
                 showAlert('Error loading inventory: ' + error.message, 'error');
@@ -4378,9 +4434,27 @@
         async function loadEmployees() {
             try {
                 const employeesRef = window.firebase.collection(window.firebase.db, 'employees');
-                const q = window.firebase.query(employeesRef, window.firebase.where('companyId', '==', currentCompany));
+                let q;
+                
+                if (currentCompany) {
+                    q = window.firebase.query(employeesRef, window.firebase.where('companyId', '==', currentCompany));
+                } else {
+                    q = window.firebase.query(employeesRef, window.firebase.where('userId', '==', currentUser));
+                }
+                
                 const querySnapshot = await window.firebase.getDocs(q);
                 employees = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Migrate legacy employee data
+                if (currentCompany) {
+                    for (const employee of employees) {
+                        if (!employee.companyId && employee.userId === currentUser) {
+                            await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'employees', employee.id), {
+                                companyId: currentCompany
+                            });
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error loading employees:', error);
                 showAlert('Error loading employees: ' + error.message, 'error');
@@ -4391,9 +4465,27 @@
         async function loadTransactions() {
             try {
                 const transactionsRef = window.firebase.collection(window.firebase.db, 'transactions');
-                const q = window.firebase.query(transactionsRef, window.firebase.where('companyId', '==', currentCompany));
+                let q;
+                
+                if (currentCompany) {
+                    q = window.firebase.query(transactionsRef, window.firebase.where('companyId', '==', currentCompany));
+                } else {
+                    q = window.firebase.query(transactionsRef, window.firebase.where('userId', '==', currentUser));
+                }
+                
                 const querySnapshot = await window.firebase.getDocs(q);
                 transactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Migrate legacy transaction data
+                if (currentCompany) {
+                    for (const transaction of transactions) {
+                        if (!transaction.companyId && transaction.userId === currentUser) {
+                            await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'transactions', transaction.id), {
+                                companyId: currentCompany
+                            });
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error loading transactions:', error);
                 showAlert('Error loading transactions: ' + error.message, 'error');
@@ -4404,9 +4496,27 @@
         async function loadLostDamagedReports() {
             try {
                 const reportsRef = window.firebase.collection(window.firebase.db, 'lostDamagedReports');
-                const q = window.firebase.query(reportsRef, window.firebase.where('companyId', '==', currentCompany));
+                let q;
+                
+                if (currentCompany) {
+                    q = window.firebase.query(reportsRef, window.firebase.where('companyId', '==', currentCompany));
+                } else {
+                    q = window.firebase.query(reportsRef, window.firebase.where('userId', '==', currentUser));
+                }
+                
                 const querySnapshot = await window.firebase.getDocs(q);
                 lostDamagedReports = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Migrate legacy report data
+                if (currentCompany) {
+                    for (const report of lostDamagedReports) {
+                        if (!report.companyId && report.userId === currentUser) {
+                            await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'lostDamagedReports', report.id), {
+                                companyId: currentCompany
+                            });
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error loading reports:', error);
                 showAlert('Error loading reports: ' + error.message, 'error');
