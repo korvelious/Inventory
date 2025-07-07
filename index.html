@@ -579,6 +579,12 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 0.9em;
+            z-index: 10;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 1);
+            transform: translateY(-1px);
         }
 
         .settings-section {
@@ -707,6 +713,59 @@
           font-size: 2.2em;
           white-space: normal;
         }
+
+        /* USB Scanner Styles */
+        .scanner-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .scanner-section.checkin {
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+            border-left: 4px solid #4caf50;
+        }
+
+        .scanner-input {
+            font-size: 1.1em;
+            padding: 15px;
+            border: 2px solid #2196f3;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .scanner-input:focus {
+            border-color: #1976d2;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+        }
+
+        .scanner-input.checkin {
+            border-color: #4caf50;
+        }
+
+        .scanner-input.checkin:focus {
+            border-color: #388e3c;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .scanner-status {
+            min-height: 24px;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scanner-help {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -722,18 +781,28 @@
         </form>
         
         <div class="setup-credentials" id="setup-credentials" style="display:none;">
-            <h3>First Time Setup</h3>
-            <p>Set up your username and password to secure your inventory system.</p>
+            <h3>Company Account Setup</h3>
+            <p>Set up your company's inventory management system. You'll be the admin.</p>
             <form class="login-form" id="setup-form">
-                <label for="setup-username">Username</label>
+                <label for="setup-company-name">Company Name</label>
+                <input type="text" id="setup-company-name" placeholder="Your Company Name" required>
+                
+                <label for="setup-username">Your Username</label>
                 <input type="text" id="setup-username" placeholder="Choose a username" required>
-                <label for="setup-email">Email Address</label>
+                
+                <label for="setup-email">Your Email Address</label>
                 <input type="email" id="setup-email" placeholder="Your Email Address" required>
+                
+                <label for="setup-full-name">Your Full Name</label>
+                <input type="text" id="setup-full-name" placeholder="Your Full Name" required>
+                
                 <label for="setup-password">Password</label>
                 <input type="password" id="setup-password" placeholder="Choose Password" required>
+                
                 <label for="setup-confirm-password">Confirm Password</label>
                 <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
-                <button type="submit" class="login-btn">Set Up Account</button>
+                
+                <button type="submit" class="login-btn">Create Company Account</button>
                 <button type="button" class="btn-link" onclick="showLoginForm()">Back to Login</button>
             </form>
         </div>
@@ -785,6 +854,11 @@
             <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
             <button class="nav-tab" onclick="showTab('add-item')">➕ Add Item</button>
             <button class="nav-tab" onclick="showTab('inventory')">📋 Inventory</button>
+            <button class="nav-tab" onclick="showTab('checkout')">📤 Check-Out</button>
+            <button class="nav-tab" onclick="showTab('checkin')">📥 Check-In</button>
+            <button class="nav-tab" onclick="showTab('employees')">👥 Employees</button>
+            <button class="nav-tab" onclick="showTab('equipment-history')">📜 Equipment History</button>
+            <button class="nav-tab" onclick="showTab('employee-history')">👤 Employee History</button>
             <button class="nav-tab" onclick="showTab('reports')">📄 Reports</button>
             <button class="nav-tab" onclick="showTab('settings')">⚙️ Settings</button>
             <!-- Admin tab will be injected by JS if user is admin -->
@@ -858,6 +932,22 @@
                             📷
                         </button>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="item-asset-tag">Asset Tag</label>
+                    <input type="text" id="item-asset-tag" class="form-control" placeholder="Unique asset identifier (e.g., LAPTOP001)">
+                </div>
+
+                <div class="form-group">
+                    <label for="item-condition">Condition</label>
+                    <select id="item-condition" class="form-control">
+                        <option value="Excellent">Excellent</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                        <option value="Poor">Poor</option>
+                        <option value="Damaged">Damaged</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -947,7 +1037,274 @@
             </div>
         </div>
 
+        <!-- Equipment Check-Out Tab -->
+        <div id="checkout" class="tab-content">
+            <h2>Equipment Check-Out</h2>
+            
+            <!-- USB Scanner Section -->
+            <div class="scanner-section">
+                <h3>🔍 Scan or Enter Equipment</h3>
+                <div class="form-group">
+                    <label for="checkout-scanner-input">USB Scanner Ready - Scan Barcode/Asset Tag or Type Equipment ID</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="checkout-scanner-input" class="form-control scanner-input" 
+                               placeholder="Focus here and scan barcode, or type asset tag/barcode" 
+                               onkeypress="handleScannerInput(event, 'checkout')" 
+                               oninput="searchEquipmentByCode('checkout')"
+                               autocomplete="off"
+                               style="flex:1;">
+                        <button type="button" class="btn btn-primary" onclick="clearScannerInput('checkout')">Clear</button>
+                    </div>
+                    <div id="checkout-scanner-status" class="scanner-status"></div>
+                    <div class="scanner-help">
+                        💡 <strong>USB Scanner Tips:</strong> Point your USB scanner at a barcode and trigger. The equipment will be automatically selected. You can also type manually.<br>
+                        ⌨️ <strong>Shortcuts:</strong> Press F1 to quickly focus this scanner, F2 for check-in scanner, ESC to clear.
+                    </div>
+                </div>
+            </div>
 
+            <form id="checkout-form">
+                <div class="form-group">
+                    <label for="checkout-equipment">Equipment * (or use scanner above)</label>
+                    <select id="checkout-equipment" class="form-control" required onchange="loadEquipmentDetails()">
+                        <option value="">Select Equipment</option>
+                    </select>
+                </div>
+                
+                <div id="equipment-details" style="display:none; background:#f8f9fa; padding:15px; border-radius:8px; margin:10px 0;">
+                    <h4>Equipment Details</h4>
+                    <div id="equipment-info"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkout-employee">Employee *</label>
+                    <select id="checkout-employee" class="form-control" required onchange="loadEmployeeDetails()">
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+
+                <div id="employee-details" style="display:none; background:#f8f9fa; padding:15px; border-radius:8px; margin:10px 0;">
+                    <h4>Employee Details</h4>
+                    <div id="employee-info"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkout-condition-before">Condition (Before) *</label>
+                    <select id="checkout-condition-before" class="form-control" required>
+                        <option value="">Select Condition</option>
+                        <option value="Excellent">Excellent</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                        <option value="Poor">Poor</option>
+                        <option value="Damaged">Damaged</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkout-expected-return">Expected Return Date *</label>
+                    <input type="date" id="checkout-expected-return" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkout-issued-by">Issued By</label>
+                    <input type="text" id="checkout-issued-by" class="form-control" placeholder="Your name">
+                </div>
+
+                <div class="form-group">
+                    <label for="checkout-notes">Notes</label>
+                    <textarea id="checkout-notes" class="form-control" rows="3" placeholder="Additional notes or instructions"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Check Out Equipment</button>
+            </form>
+
+            <h3 style="margin-top:40px;">Currently Checked Out Equipment</h3>
+            <div class="search-box">
+                <input type="text" id="checkout-search" placeholder="Search checked out equipment..." onkeyup="searchCheckouts(this.value)">
+            </div>
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Equipment</th>
+                        <th>Employee</th>
+                        <th>Check-Out Date</th>
+                        <th>Expected Return</th>
+                        <th>Days Out</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="checkout-body">
+                </tbody>
+            </table>
+            
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
+            </div>
+        </div>
+
+        <!-- Equipment Check-In Tab -->
+        <div id="checkin" class="tab-content">
+            <h2>Equipment Check-In</h2>
+            
+            <!-- USB Scanner Section -->
+            <div class="scanner-section checkin">
+                <h3>📥 Scan Equipment to Check In</h3>
+                <div class="form-group">
+                    <label for="checkin-scanner-input">USB Scanner Ready - Scan Barcode/Asset Tag or Type Equipment ID</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="checkin-scanner-input" class="form-control scanner-input checkin" 
+                               placeholder="Focus here and scan barcode, or type asset tag/barcode" 
+                               onkeypress="handleScannerInput(event, 'checkin')" 
+                               oninput="searchEquipmentByCode('checkin')"
+                               autocomplete="off"
+                               style="flex:1;">
+                        <button type="button" class="btn btn-success" onclick="clearScannerInput('checkin')">Clear</button>
+                    </div>
+                    <div id="checkin-scanner-status" class="scanner-status"></div>
+                    <div class="scanner-help">
+                        💡 <strong>USB Scanner Tips:</strong> Scan equipment to instantly open the check-in form. The system will automatically find who has it checked out.<br>
+                        ⌨️ <strong>Shortcuts:</strong> Press F2 to quickly focus this scanner, F1 for check-out scanner, ESC to clear.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="checkin-search" placeholder="Search by equipment name, employee, or transaction ID..." onkeyup="searchCheckinsAvailable(this.value)">
+            </div>
+            
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Equipment</th>
+                        <th>Employee</th>
+                        <th>Check-Out Date</th>
+                        <th>Expected Return</th>
+                        <th>Days Out</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="checkin-available-body">
+                </tbody>
+            </table>
+            
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
+            </div>
+        </div>
+
+        <!-- Employees Tab -->
+        <div id="employees" class="tab-content">
+            <h2>Employee Management</h2>
+            <button class="btn btn-primary" onclick="showAddEmployeeModal()" style="margin-bottom:20px;">Add New Employee</button>
+            
+            <div class="search-box">
+                <input type="text" id="employee-search" placeholder="Search employees..." onkeyup="searchEmployees(this.value)">
+            </div>
+            
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Job Title</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Equipment Out</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employees-body">
+                </tbody>
+            </table>
+            
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
+            </div>
+        </div>
+
+        <!-- Equipment History Tab -->
+        <div id="equipment-history" class="tab-content">
+            <h2>Equipment History</h2>
+            
+            <div class="form-group" style="max-width:300px;">
+                <label for="equipment-filter">Filter by Equipment</label>
+                <select id="equipment-filter" class="form-control" onchange="filterEquipmentHistory()">
+                    <option value="">All Equipment</option>
+                </select>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="equipment-history-search" placeholder="Search equipment history..." onkeyup="searchEquipmentHistory(this.value)">
+            </div>
+            
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Equipment</th>
+                        <th>Asset Tag</th>
+                        <th>Employee</th>
+                        <th>Check-Out Date</th>
+                        <th>Return Date</th>
+                        <th>Duration</th>
+                        <th>Condition Before</th>
+                        <th>Condition After</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="equipment-history-body">
+                </tbody>
+            </table>
+            
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
+            </div>
+        </div>
+
+        <!-- Employee History Tab -->
+        <div id="employee-history" class="tab-content">
+            <h2>Employee Checkout History</h2>
+            
+            <div class="form-group" style="max-width:300px;">
+                <label for="employee-filter">Filter by Employee</label>
+                <select id="employee-filter" class="form-control" onchange="filterEmployeeHistory()">
+                    <option value="">All Employees</option>
+                </select>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="employee-history-search" placeholder="Search employee history..." onkeyup="searchEmployeeHistory(this.value)">
+            </div>
+            
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Employee</th>
+                        <th>Equipment</th>
+                        <th>Check-Out Date</th>
+                        <th>Return Date</th>
+                        <th>Duration</th>
+                        <th>Condition Before</th>
+                        <th>Condition After</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employee-history-body">
+                </tbody>
+            </table>
+            
+            <div class="version-info" style="text-align:center; color:#888; font-size:0.95em; margin-top:30px;">
+              Version: 1.0.0 &mdash; Commit: <span class="version-commit">abcdef0</span> &mdash; Updated: <span class="version-date"></span>
+            </div>
+        </div>
 
         <!-- Reports Tab -->
         <div id="reports" class="tab-content">
@@ -1087,9 +1444,35 @@
                 <button class="btn btn-primary" onclick="exportUserData()">Create Device Backup</button>
             </div>
 
+            <div class="settings-section" id="team-management-section" style="display:none;">
+                <h3>👥 Team Management</h3>
+                <div style="margin-bottom:20px;">
+                    <button class="btn btn-success" onclick="showInviteUserModal()">Invite Team Member</button>
+                    <button class="btn btn-primary" onclick="loadTeamMembers()">Refresh Team List</button>
+                </div>
+                
+                <h4>Current Team Members</h4>
+                <table class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="team-members-body">
+                    </tbody>
+                </table>
+            </div>
+
             <div class="settings-section">
                 <h3>ℹ️ About</h3>
                 <p><strong>Version:</strong> 1.0.0</p>
+                <p><strong>Company:</strong> <span id="current-company">Loading...</span></p>
+                <p><strong>Your Role:</strong> <span id="current-role">Loading...</span></p>
                 <p><strong>Last Login:</strong> <span id="last-login">Never</span></p>
                 <p><strong>Total Items:</strong> <span id="total-items-settings">0</span></p>
                 <p><strong>Account Created:</strong> <span id="account-created">Unknown</span></p>
@@ -1186,6 +1569,22 @@
                     <label for="edit-item-barcode">Barcode</label>
                     <input type="text" id="edit-item-barcode" class="form-control">
                 </div>
+                
+                <div class="form-group">
+                    <label for="edit-item-asset-tag">Asset Tag</label>
+                    <input type="text" id="edit-item-asset-tag" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-item-condition">Condition</label>
+                    <select id="edit-item-condition" class="form-control">
+                        <option value="Excellent">Excellent</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                        <option value="Poor">Poor</option>
+                        <option value="Damaged">Damaged</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label for="edit-item-description">Description</label>
                     <textarea id="edit-item-description" class="form-control" rows="3"></textarea>
@@ -1236,6 +1635,7 @@
     <!-- Add Admin Dashboard -->
     <div id="admin-dashboard" class="container hidden">
       <button class="logout-btn" onclick="logoutAdmin()">🚪 Logout</button>
+      <button class="logout-btn" onclick="returnToMainApp()" style="right:120px; background: rgba(40, 167, 69, 0.9);">↩️ Back to Main App</button>
       <div class="header">
         <h1>👤 Admin User Management</h1>
         <p>View all signed up users</p>
@@ -1266,15 +1666,307 @@
         </div>
     </div>
 
+    <!-- Add Employee Modal -->
+    <div id="add-employee-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddEmployeeModal()">&times;</span>
+            <h2>Add New Employee</h2>
+            <form id="add-employee-form">
+                <div class="form-group">
+                    <label for="employee-id">Employee ID *</label>
+                    <input type="text" id="employee-id" class="form-control" required placeholder="e.g., EMP001">
+                </div>
+                <div class="form-group">
+                    <label for="employee-name">Full Name *</label>
+                    <input type="text" id="employee-name" class="form-control" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="employee-email">Email</label>
+                    <input type="email" id="employee-email" class="form-control" placeholder="john.doe@company.com">
+                </div>
+                <div class="form-group">
+                    <label for="employee-phone">Phone</label>
+                    <input type="tel" id="employee-phone" class="form-control" placeholder="(555) 123-4567">
+                </div>
+                <div class="form-group">
+                    <label for="employee-department">Department *</label>
+                    <select id="employee-department" class="form-control" required>
+                        <option value="">Select Department</option>
+                        <option value="IT">IT</option>
+                        <option value="HR">HR</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="employee-job-title">Job Title *</label>
+                    <input type="text" id="employee-job-title" class="form-control" required placeholder="Software Developer">
+                </div>
+                <div class="form-group">
+                    <label for="employee-status">Status</label>
+                    <select id="employee-status" class="form-control">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="On Leave">On Leave</option>
+                        <option value="Terminated">Terminated</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Employee</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Employee Modal -->
+    <div id="edit-employee-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditEmployeeModal()">&times;</span>
+            <h2>Edit Employee</h2>
+            <form id="edit-employee-form">
+                <input type="hidden" id="edit-employee-doc-id">
+                <div class="form-group">
+                    <label for="edit-employee-id">Employee ID *</label>
+                    <input type="text" id="edit-employee-id" class="form-control" required readonly>
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-name">Full Name *</label>
+                    <input type="text" id="edit-employee-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-email">Email</label>
+                    <input type="email" id="edit-employee-email" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-phone">Phone</label>
+                    <input type="tel" id="edit-employee-phone" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-department">Department *</label>
+                    <select id="edit-employee-department" class="form-control" required>
+                        <option value="IT">IT</option>
+                        <option value="HR">HR</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-job-title">Job Title *</label>
+                    <input type="text" id="edit-employee-job-title" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-status">Status</label>
+                    <select id="edit-employee-status" class="form-control">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="On Leave">On Leave</option>
+                        <option value="Terminated">Terminated</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Employee</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Check-In Modal -->
+    <div id="checkin-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCheckinModal()">&times;</span>
+            <h2>Check-In Equipment</h2>
+            <form id="checkin-form">
+                <input type="hidden" id="checkin-transaction-id">
+                
+                <div id="checkin-transaction-details" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px;">
+                    <h4>Transaction Details</h4>
+                    <div id="checkin-details-content"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkin-condition-after">Condition (After) *</label>
+                    <select id="checkin-condition-after" class="form-control" required>
+                        <option value="">Select Condition</option>
+                        <option value="Excellent">Excellent</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                        <option value="Poor">Poor</option>
+                        <option value="Damaged">Damaged</option>
+                        <option value="Lost">Lost</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkin-returned-by">Returned By</label>
+                    <input type="text" id="checkin-returned-by" class="form-control" placeholder="Your name">
+                </div>
+
+                <div class="form-group">
+                    <label for="checkin-return-notes">Return Notes</label>
+                    <textarea id="checkin-return-notes" class="form-control" rows="3" placeholder="Any issues, damage, or comments"></textarea>
+                </div>
+
+                <div class="form-group" id="replacement-cost-group" style="display:none;">
+                    <label for="checkin-replacement-cost">Replacement Cost ($)</label>
+                    <input type="number" id="checkin-replacement-cost" class="form-control" min="0" step="0.01" placeholder="0.00">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Check In Equipment</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transaction Details Modal -->
+    <div id="transaction-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTransactionDetails()">&times;</span>
+            <h2>Transaction Details</h2>
+            <div id="transaction-details-content"></div>
+        </div>
+    </div>
+
+    <!-- Lost/Damaged Equipment Report Modal -->
+    <div id="lost-damaged-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeLostDamagedModal()">&times;</span>
+            <h2>Lost/Damaged Equipment Report</h2>
+            <form id="lost-damaged-form">
+                <input type="hidden" id="report-transaction-id">
+                
+                <div id="report-equipment-details" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px;">
+                    <h4>Equipment Details</h4>
+                    <div id="report-equipment-content"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="report-type">Report Type *</label>
+                    <select id="report-type" class="form-control" required>
+                        <option value="">Select Type</option>
+                        <option value="Lost">Lost Equipment</option>
+                        <option value="Damaged">Damaged Equipment</option>
+                        <option value="Stolen">Stolen Equipment</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="report-description">Description *</label>
+                    <textarea id="report-description" class="form-control" rows="4" required placeholder="Describe what happened, when it was discovered, circumstances, etc."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="report-date-discovered">Date Discovered</label>
+                    <input type="date" id="report-date-discovered" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="report-replacement-cost">Estimated Replacement Cost ($) *</label>
+                    <input type="number" id="report-replacement-cost" class="form-control" min="0" step="0.01" required placeholder="0.00">
+                </div>
+
+                <div class="form-group">
+                    <label for="report-action-taken">Action Taken</label>
+                    <textarea id="report-action-taken" class="form-control" rows="3" placeholder="What actions have been taken? Police report filed? Insurance claim? etc."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="report-reported-by">Reported By</label>
+                    <input type="text" id="report-reported-by" class="form-control" placeholder="Your name">
+                </div>
+
+                <button type="submit" class="btn btn-danger">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Invite User Modal -->
+    <div id="invite-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeInviteUserModal()">&times;</span>
+            <h2>Invite Team Member</h2>
+            <form id="invite-user-form">
+                <div class="form-group">
+                    <label for="invite-email">Email Address *</label>
+                    <input type="email" id="invite-email" class="form-control" required placeholder="colleague@company.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="invite-full-name">Full Name *</label>
+                    <input type="text" id="invite-full-name" class="form-control" required placeholder="John Doe">
+                </div>
+
+                <div class="form-group">
+                    <label for="invite-role">Role *</label>
+                    <select id="invite-role" class="form-control" required onchange="showRoleDescription()">
+                        <option value="">Select Role</option>
+                        <option value="admin">Admin - Full access to everything</option>
+                        <option value="manager">Manager - Inventory, equipment, employees, reports</option>
+                        <option value="employee">Employee - Check-in/out equipment, view own history</option>
+                        <option value="viewer">Viewer - Read-only access to inventory and reports</option>
+                    </select>
+                </div>
+
+                <div id="role-description" style="background:#f8f9fa; padding:10px; border-radius:5px; margin:10px 0; display:none;">
+                    <h4>Role Permissions:</h4>
+                    <div id="role-permissions-list"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="invite-temporary-password">Temporary Password *</label>
+                    <input type="password" id="invite-temporary-password" class="form-control" required placeholder="Temporary password (they'll change it on first login)">
+                </div>
+
+                <div class="form-group">
+                    <label for="invite-message">Welcome Message (Optional)</label>
+                    <textarea id="invite-message" class="form-control" rows="3" placeholder="Welcome to our inventory management system!"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-success">Send Invitation</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         // Authentication variables
         let isAuthenticated = false;
         let currentUser = null;
+        let currentUserData = null;
+        let currentCompany = null;
         let inventory = [];
         let scanner = null;
         let stream = null;
-        // Add global isAdmin variable
+        // Add global permission variables
         let isAdmin = false;
+        let userRole = 'viewer'; // admin, manager, employee, viewer
+        let userPermissions = {};
+
+        // Equipment management variables
+        let employees = [];
+        let transactions = [];
+        let lostDamagedReports = [];
+
+        // Permission levels and their capabilities
+        const ROLES = {
+            admin: {
+                name: 'Admin',
+                permissions: ['all']
+            },
+            manager: {
+                name: 'Manager', 
+                permissions: ['inventory.manage', 'equipment.manage', 'employees.manage', 'reports.view', 'transactions.manage']
+            },
+            employee: {
+                name: 'Employee',
+                permissions: ['equipment.checkout', 'equipment.checkin', 'reports.own', 'inventory.view']
+            },
+            viewer: {
+                name: 'Viewer',
+                permissions: ['inventory.view', 'reports.view', 'transactions.view']
+            }
+        };
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
@@ -1355,12 +2047,22 @@
         }
 
         async function setupCredentials() {
+            const companyName = document.getElementById('setup-company-name').value.trim();
             const username = document.getElementById('setup-username').value.trim();
             const email = document.getElementById('setup-email').value.trim().toLowerCase();
+            const fullName = document.getElementById('setup-full-name').value.trim();
             const password = document.getElementById('setup-password').value;
             const confirmPassword = document.getElementById('setup-confirm-password').value;
+            if (!companyName) {
+                showAlert('Please enter a company name!', 'error');
+                return;
+            }
             if (!username) {
                 showAlert('Please enter a username!', 'error');
+                return;
+            }
+            if (!fullName) {
+                showAlert('Please enter your full name!', 'error');
                 return;
             }
             if (password !== confirmPassword) {
@@ -1397,19 +2099,44 @@
                 const user = userCredential.user;
                 // Get IP
                 const ip = await getPublicIP();
-                // Store user profile in Firestore
+                
+                // First create the company
+                const companyData = {
+                    name: companyName,
+                    created: new Date().toISOString(),
+                    createdBy: email,
+                    status: 'active',
+                    plan: 'basic'
+                };
+                const companyRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'companies'), companyData);
+                const companyId = companyRef.id;
+                
+                // Store user profile in Firestore with company and admin role
                 const userProfile = {
                     username: username,
                     email: email,
+                    fullName: fullName,
+                    companyId: companyId,
+                    companyName: companyName,
+                    role: 'admin',
+                    permissions: ROLES.admin.permissions,
+                    status: 'active',
                     created: new Date().toISOString(),
                     lastIP: ip
                 };
                 await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'users'), userProfile);
+                
                 sendSignupEmail(username, password);
                 isAuthenticated = true;
                 currentUser = username;
+                currentUserData = userProfile;
+                currentCompany = companyId;
+                userRole = 'admin';
+                isAdmin = true;
+                userPermissions = ROLES.admin.permissions;
+                
                 await showMainApp();
-                showAlert('Account created successfully! Welcome to your inventory system.', 'success');
+                showAlert('Company account created successfully! Welcome to your inventory system.', 'success');
             } catch (error) {
                 console.error('Error creating account:', error);
                 if (error.code === 'auth/email-already-in-use') {
@@ -1437,20 +2164,34 @@
                 if (!querySnapshot.empty) {
                     const userDoc = querySnapshot.docs[0];
                     const userData = userDoc.data();
+                    
+                    // Check if user account is active
+                    if (userData.status === 'inactive') {
+                        showLoginError('Your account has been deactivated. Please contact your administrator.');
+                        return;
+                    }
+                    
                     isAuthenticated = true;
                     currentUser = userData.username;
-                    isAdmin = userData.username === 'admin';
+                    currentUserData = userData;
+                    currentCompany = userData.companyId;
+                    userRole = userData.role || 'viewer';
+                    isAdmin = userData.role === 'admin';
+                    userPermissions = userData.permissions || ROLES[userRole]?.permissions || [];
+                    
                     // Save IP
                     const ip = await getPublicIP();
                     await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: ip });
                     // Create session
                     const session = {
                         username: userData.username,
+                        role: userData.role,
+                        companyId: userData.companyId,
                         timestamp: Date.now()
                     };
                     localStorage.setItem('inventory_session', JSON.stringify(session));
                     await showMainApp();
-                    showAlert('Login successful!', 'success');
+                    showAlert(`Welcome back, ${userData.fullName || userData.username}!`, 'success');
                 } else {
                     showLoginError('User profile not found!');
                 }
@@ -1489,18 +2230,29 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
             setupEventListeners();
+            updateNavigationForRole();
             await loadInventory();
+            await loadEmployees();
+            await loadTransactions();
+            await loadLostDamagedReports();
             updateDashboard();
             loadInventoryTable();
+            loadEmployeesTable();
+            loadCheckoutOptions();
+            loadCheckoutTable();
+            loadCheckinTable();
+            loadEquipmentHistory();
+            loadEmployeeHistory();
             await loadUserSettings();
             await loadCategoriesFromFirestore();
             updateAdminTab();
+            updateUserInterface();
         }
 
         async function loadInventory() {
             try {
                 const inventoryRef = window.firebase.collection(window.firebase.db, 'inventory');
-                const q = window.firebase.query(inventoryRef, window.firebase.where('userId', '==', currentUser));
+                const q = window.firebase.query(inventoryRef, window.firebase.where('companyId', '==', currentCompany));
                 const querySnapshot = await window.firebase.getDocs(q);
                 inventory = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             } catch (error) {
@@ -1520,6 +2272,56 @@
                 addItem();
             });
             }
+
+            // Equipment management event listeners
+            const addEmployeeForm = document.getElementById('add-employee-form');
+            if (addEmployeeForm) {
+                addEmployeeForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    addEmployee();
+                });
+            }
+
+            const editEmployeeForm = document.getElementById('edit-employee-form');
+            if (editEmployeeForm) {
+                editEmployeeForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    updateEmployee();
+                });
+            }
+
+            const checkoutForm = document.getElementById('checkout-form');
+            if (checkoutForm) {
+                checkoutForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    checkoutEquipment();
+                });
+            }
+
+            const checkinForm = document.getElementById('checkin-form');
+            if (checkinForm) {
+                checkinForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    checkinEquipment();
+                });
+            }
+
+            const lostDamagedForm = document.getElementById('lost-damaged-form');
+            if (lostDamagedForm) {
+                lostDamagedForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitLostDamagedReport();
+                });
+            }
+
+            const inviteUserForm = document.getElementById('invite-user-form');
+            if (inviteUserForm) {
+                inviteUserForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    inviteUser();
+                });
+            }
+
             eventListenersSetup = true;
           }
           // Always (re)attach edit form listener
@@ -1573,6 +2375,13 @@
             if (tabName === 'dashboard') {
                 updateDashboard();
             }
+
+            // Auto-focus scanner inputs when switching to checkout/checkin tabs
+            if (tabName === 'checkout') {
+                focusScannerInput('checkout');
+            } else if (tabName === 'checkin') {
+                focusScannerInput('checkin');
+            }
         }
 
         // Utility: Resize and compress image to fit under 1MB
@@ -1623,6 +2432,8 @@
         }
 
         function addItem() {
+            if (!checkPermission('inventory.manage', 'You do not have permission to add inventory items.')) return;
+            
             const name = document.getElementById('item-name').value;
             const barcode = document.getElementById('item-barcode').value;
             const description = document.getElementById('item-description').value;
@@ -1669,16 +2480,22 @@
 
         async function saveItem(name, barcode, description, category, quantity, price, location, minStock, imageData) {
             try {
+            const assetTag = document.getElementById('item-asset-tag').value;
+            const condition = document.getElementById('item-condition').value || 'Good';
+            
             const item = {
                     userId: currentUser,
+                    companyId: currentCompany,
                 name: name,
                 barcode: barcode,
+                assetTag: assetTag,
                 description: description,
                 category: category,
                 quantity: quantity,
                 price: price,
                 location: location,
                 minStock: minStock,
+                condition: condition,
                 image: imageData,
                 dateAdded: new Date().toISOString()
             };
@@ -1780,6 +2597,8 @@
             document.getElementById('edit-item-id').value = item.id;
             document.getElementById('edit-item-name').value = item.name;
             document.getElementById('edit-item-barcode').value = item.barcode || '';
+            document.getElementById('edit-item-asset-tag').value = item.assetTag || '';
+            document.getElementById('edit-item-condition').value = item.condition || 'Good';
             document.getElementById('edit-item-description').value = item.description || '';
             document.getElementById('edit-item-category').value = item.category || '';
             document.getElementById('edit-item-quantity').value = item.quantity;
@@ -1832,6 +2651,8 @@
                 const id = document.getElementById('edit-item-id').value;
             const name = document.getElementById('edit-item-name').value;
                 const barcode = document.getElementById('edit-item-barcode').value;
+                const assetTag = document.getElementById('edit-item-asset-tag').value;
+                const condition = document.getElementById('edit-item-condition').value;
                 const description = document.getElementById('edit-item-description').value;
                 const category = document.getElementById('edit-item-category').value;
             const quantity = parseInt(document.getElementById('edit-item-quantity').value);
@@ -1868,13 +2689,13 @@
                             showAlert('Total image size exceeds 1MB. Please use fewer or smaller images.', 'error');
                             return;
                         }
-                        await saveUpdatedItem(id, name, barcode, description, category, quantity, price, location, minStock, imageData, tags);
+                        await saveUpdatedItem(id, name, barcode, assetTag, condition, description, category, quantity, price, location, minStock, imageData, tags);
                     }
                 } else {
                     // If no new images, keep the old ones
                     const item = inventory.find(item => item.id === id);
                     imageData = item && item.image ? item.image : null;
-                    await saveUpdatedItem(id, name, barcode, description, category, quantity, price, location, minStock, imageData, tags);
+                    await saveUpdatedItem(id, name, barcode, assetTag, condition, description, category, quantity, price, location, minStock, imageData, tags);
                 }
             } catch (error) {
                 console.error('Error updating item:', error);
@@ -1882,12 +2703,14 @@
             }
         }
 
-        async function saveUpdatedItem(id, name, barcode, description, category, quantity, price, location, minStock, imageData, tags) {
+        async function saveUpdatedItem(id, name, barcode, assetTag, condition, description, category, quantity, price, location, minStock, imageData, tags) {
             try {
                 const itemRef = window.firebase.doc(window.firebase.db, 'inventory', id);
                 await window.firebase.updateDoc(itemRef, {
                     name: name,
                     barcode: barcode,
+                    assetTag: assetTag,
+                    condition: condition,
                     description: description,
                     category: category,
                     quantity: quantity,
@@ -1904,6 +2727,8 @@
                         ...inventory[itemIndex],
                         name,
                         barcode,
+                        assetTag,
+                        condition,
                         description,
                         category,
                         quantity,
@@ -1924,7 +2749,9 @@
             }
         }
 
-        async function deleteItem(id) {
+        async         function deleteItem(id) {
+            if (!checkPermission('inventory.manage', 'You do not have permission to delete inventory items.')) return;
+            
             if (confirm('Are you sure you want to delete this item?')) {
                 try {
                     const itemRef = window.firebase.doc(window.firebase.db, 'inventory', id);
@@ -2676,6 +3503,36 @@
             if (event.target === userDetailsModal) {
                 closeUserDetails();
             }
+
+            const addEmployeeModal = document.getElementById('add-employee-modal');
+            if (event.target === addEmployeeModal) {
+                closeAddEmployeeModal();
+            }
+
+            const editEmployeeModal = document.getElementById('edit-employee-modal');
+            if (event.target === editEmployeeModal) {
+                closeEditEmployeeModal();
+            }
+
+            const checkinModal = document.getElementById('checkin-modal');
+            if (event.target === checkinModal) {
+                closeCheckinModal();
+            }
+
+            const transactionDetailsModal = document.getElementById('transaction-details-modal');
+            if (event.target === transactionDetailsModal) {
+                closeTransactionDetails();
+            }
+
+            const lostDamagedModal = document.getElementById('lost-damaged-modal');
+            if (event.target === lostDamagedModal) {
+                closeLostDamagedModal();
+            }
+
+            const inviteUserModal = document.getElementById('invite-user-modal');
+            if (event.target === inviteUserModal) {
+                closeInviteUserModal();
+            }
         }
 
         let categories = ["Electronics", "Clothing", "Books", "Food", "Tools", "Other"];
@@ -2961,6 +3818,28 @@
           document.getElementById('admin-dashboard').classList.add('hidden');
           showLoginScreen();
         }
+
+        function returnToMainApp() {
+          document.getElementById('admin-dashboard').classList.add('hidden');
+          document.getElementById('main-app').style.display = 'block';
+          
+          // Reset ALL nav tabs (including admin tab) to inactive
+          document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+          
+          // Show dashboard tab as default
+          const dashboardTab = document.querySelector('button[onclick="showTab(\'dashboard\')"]');
+          if (dashboardTab) {
+            dashboardTab.classList.add('active');
+          }
+          document.getElementById('dashboard').classList.add('active');
+          
+          // Update dashboard data
+          updateDashboard();
+          
+          // Optional: Show success message
+          showAlert('Returned to main inventory app', 'success');
+        }
         async function loadAllUsers() {
           try {
             const usersRef = window.firebase.collection(window.firebase.db, 'users');
@@ -3074,7 +3953,7 @@
             btn.textContent = '👤 Admin';
             btn.onclick = function() {
               showAdminDashboard();
-              // Set active class
+              // Set active class for admin tab
               document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
               btn.classList.add('active');
             };
@@ -3237,6 +4116,1291 @@
             el.textContent = commit;
           });
         });
+
+        // ========================
+        // USB SCANNER FUNCTIONS
+        // ========================
+
+        // Handle USB scanner input (usually ends with Enter key)
+        function handleScannerInput(event, mode) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const code = input.value.trim();
+                
+                if (code) {
+                    searchEquipmentByCode(mode, code);
+                    
+                    // Clear input after a short delay to prepare for next scan
+                    setTimeout(() => {
+                        input.value = '';
+                        input.focus();
+                    }, 1000);
+                }
+            }
+        }
+
+        // Search for equipment by barcode or asset tag
+        function searchEquipmentByCode(mode, code = null) {
+            const inputId = mode === 'checkout' ? 'checkout-scanner-input' : 'checkin-scanner-input';
+            const statusId = mode === 'checkout' ? 'checkout-scanner-status' : 'checkin-scanner-status';
+            const searchCode = code || document.getElementById(inputId).value.trim();
+            const statusDiv = document.getElementById(statusId);
+            
+            if (!searchCode) {
+                statusDiv.innerHTML = '';
+                return;
+            }
+
+            // Search in inventory for barcode or asset tag match
+            const foundEquipment = inventory.find(item => 
+                (item.barcode && item.barcode.toLowerCase() === searchCode.toLowerCase()) ||
+                (item.assetTag && item.assetTag.toLowerCase() === searchCode.toLowerCase())
+            );
+
+            if (foundEquipment) {
+                if (mode === 'checkout') {
+                    handleCheckoutScan(foundEquipment, statusDiv);
+                } else if (mode === 'checkin') {
+                    handleCheckinScan(foundEquipment, statusDiv);
+                }
+            } else {
+                statusDiv.innerHTML = `<span style="color: #dc3545;">❌ Equipment not found: ${searchCode}</span>`;
+                
+                // Clear status after 3 seconds
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        // Handle checkout scanning
+        function handleCheckoutScan(equipment, statusDiv) {
+            // Check if equipment is already checked out
+            const isCheckedOut = transactions.some(t => t.equipmentId === equipment.id && !t.returnDate);
+            
+            if (isCheckedOut) {
+                statusDiv.innerHTML = `<span style="color: #ffc107;">⚠️ Equipment "${equipment.name}" is already checked out!</span>`;
+                
+                // Show in check-in section instead
+                setTimeout(() => {
+                    statusDiv.innerHTML = `<span style="color: #007bff;">💡 This equipment is checked out. Switch to Check-In tab to return it.</span>`;
+                }, 2000);
+                
+                return;
+            }
+
+            // Equipment is available for checkout
+            const equipmentSelect = document.getElementById('checkout-equipment');
+            equipmentSelect.value = equipment.id;
+            loadEquipmentDetails();
+            
+            statusDiv.innerHTML = `<span style="color: #28a745;">✅ Found: ${equipment.name} ${equipment.assetTag ? '(' + equipment.assetTag + ')' : ''}</span>`;
+            
+            // Auto-focus employee field
+            setTimeout(() => {
+                document.getElementById('checkout-employee').focus();
+            }, 500);
+        }
+
+        // Handle checkin scanning
+        function handleCheckinScan(equipment, statusDiv) {
+            // Find active transaction for this equipment
+            const activeTransaction = transactions.find(t => t.equipmentId === equipment.id && !t.returnDate);
+            
+            if (!activeTransaction) {
+                statusDiv.innerHTML = `<span style="color: #ffc107;">⚠️ Equipment "${equipment.name}" is not currently checked out!</span>`;
+                
+                setTimeout(() => {
+                    statusDiv.innerHTML = `<span style="color: #007bff;">💡 This equipment is available. Switch to Check-Out tab to assign it.</span>`;
+                }, 2000);
+                
+                return;
+            }
+
+            // Equipment is checked out and can be returned
+            statusDiv.innerHTML = `<span style="color: #28a745;">✅ Found: ${equipment.name} - Checked out to ${activeTransaction.employeeName}</span>`;
+            
+            // Auto-open check-in modal
+            setTimeout(() => {
+                showCheckinModal(activeTransaction.id);
+            }, 1000);
+        }
+
+        // Clear scanner input and refocus
+        function clearScannerInput(mode) {
+            const inputId = mode === 'checkout' ? 'checkout-scanner-input' : 'checkin-scanner-input';
+            const statusId = mode === 'checkout' ? 'checkout-scanner-status' : 'checkin-scanner-status';
+            
+            document.getElementById(inputId).value = '';
+            document.getElementById(statusId).innerHTML = '';
+            document.getElementById(inputId).focus();
+        }
+
+        // Auto-focus scanner input when tab is shown
+        function focusScannerInput(mode) {
+            const inputId = mode === 'checkout' ? 'checkout-scanner-input' : 'checkin-scanner-input';
+            setTimeout(() => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 100);
+        }
+
+        // Permission checking functions
+        function hasPermission(permission) {
+            if (!userPermissions) return false;
+            return userPermissions.includes('all') || userPermissions.includes(permission);
+        }
+
+        function checkPermission(permission, errorMessage = 'You do not have permission to perform this action.') {
+            if (!hasPermission(permission)) {
+                showAlert(errorMessage, 'error');
+                return false;
+            }
+            return true;
+        }
+
+        function updateNavigationForRole() {
+            const navTabs = document.getElementById('main-nav-tabs');
+            if (!navTabs) return;
+
+            // Define tab permissions
+            const tabPermissions = {
+                'dashboard': 'inventory.view',
+                'add-item': 'inventory.manage',
+                'inventory': 'inventory.view',
+                'checkout': 'equipment.checkout',
+                'checkin': 'equipment.checkin',
+                'employees': 'employees.manage',
+                'equipment-history': 'transactions.view',
+                'employee-history': 'transactions.view',
+                'reports': 'reports.view',
+                'settings': 'all' // Everyone can access basic settings
+            };
+
+            // Show/hide tabs based on permissions
+            navTabs.querySelectorAll('.nav-tab').forEach(tab => {
+                const tabText = tab.textContent.trim();
+                let tabKey = '';
+                
+                if (tabText.includes('Dashboard')) tabKey = 'dashboard';
+                else if (tabText.includes('Add Item')) tabKey = 'add-item';
+                else if (tabText.includes('Inventory')) tabKey = 'inventory';
+                else if (tabText.includes('Check-Out')) tabKey = 'checkout';
+                else if (tabText.includes('Check-In')) tabKey = 'checkin';
+                else if (tabText.includes('Employees')) tabKey = 'employees';
+                else if (tabText.includes('Equipment History')) tabKey = 'equipment-history';
+                else if (tabText.includes('Employee History')) tabKey = 'employee-history';
+                else if (tabText.includes('Reports')) tabKey = 'reports';
+                else if (tabText.includes('Settings')) tabKey = 'settings';
+                else if (tabText.includes('Admin')) {
+                    // Admin tab only for admin role
+                    tab.style.display = isAdmin ? 'block' : 'none';
+                    return;
+                }
+
+                if (tabKey && tabPermissions[tabKey]) {
+                    const hasAccess = hasPermission(tabPermissions[tabKey]);
+                    tab.style.display = hasAccess ? 'block' : 'none';
+                }
+            });
+        }
+
+        // Keyboard shortcuts for scanner inputs
+        document.addEventListener('keydown', function(event) {
+            // F1 - Focus checkout scanner
+            if (event.key === 'F1') {
+                event.preventDefault();
+                if (hasPermission('equipment.checkout')) {
+                    showTab('checkout');
+                    focusScannerInput('checkout');
+                }
+            }
+            // F2 - Focus checkin scanner  
+            else if (event.key === 'F2') {
+                event.preventDefault();
+                if (hasPermission('equipment.checkin')) {
+                    showTab('checkin');
+                    focusScannerInput('checkin');
+                }
+            }
+            // Escape - Clear current scanner input
+            else if (event.key === 'Escape') {
+                const activeElement = document.activeElement;
+                if (activeElement && activeElement.classList.contains('scanner-input')) {
+                    if (activeElement.id === 'checkout-scanner-input') {
+                        clearScannerInput('checkout');
+                    } else if (activeElement.id === 'checkin-scanner-input') {
+                        clearScannerInput('checkin');
+                    }
+                }
+            }
+        });
+
+        // ========================
+        // EQUIPMENT MANAGEMENT FUNCTIONS
+        // ========================
+
+        // Load employees from Firestore
+        async function loadEmployees() {
+            try {
+                const employeesRef = window.firebase.collection(window.firebase.db, 'employees');
+                const q = window.firebase.query(employeesRef, window.firebase.where('companyId', '==', currentCompany));
+                const querySnapshot = await window.firebase.getDocs(q);
+                employees = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error('Error loading employees:', error);
+                showAlert('Error loading employees: ' + error.message, 'error');
+            }
+        }
+
+        // Load transactions from Firestore
+        async function loadTransactions() {
+            try {
+                const transactionsRef = window.firebase.collection(window.firebase.db, 'transactions');
+                const q = window.firebase.query(transactionsRef, window.firebase.where('companyId', '==', currentCompany));
+                const querySnapshot = await window.firebase.getDocs(q);
+                transactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                showAlert('Error loading transactions: ' + error.message, 'error');
+            }
+        }
+
+        // Load lost/damaged reports from Firestore
+        async function loadLostDamagedReports() {
+            try {
+                const reportsRef = window.firebase.collection(window.firebase.db, 'lostDamagedReports');
+                const q = window.firebase.query(reportsRef, window.firebase.where('companyId', '==', currentCompany));
+                const querySnapshot = await window.firebase.getDocs(q);
+                lostDamagedReports = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                showAlert('Error loading reports: ' + error.message, 'error');
+            }
+        }
+
+        // Employee Management Functions
+        function showAddEmployeeModal() {
+            document.getElementById('add-employee-modal').style.display = 'block';
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('add-employee-modal').style.display = 'none';
+            document.getElementById('add-employee-form').reset();
+        }
+
+        function closeEditEmployeeModal() {
+            document.getElementById('edit-employee-modal').style.display = 'none';
+            document.getElementById('edit-employee-form').reset();
+        }
+
+        // Add employee
+        async function addEmployee() {
+            if (!checkPermission('employees.manage', 'You do not have permission to add employees.')) return;
+            
+            try {
+                const employeeData = {
+                    userId: currentUser,
+                    companyId: currentCompany,
+                    employeeId: document.getElementById('employee-id').value.trim(),
+                    name: document.getElementById('employee-name').value.trim(),
+                    email: document.getElementById('employee-email').value.trim(),
+                    phone: document.getElementById('employee-phone').value.trim(),
+                    department: document.getElementById('employee-department').value,
+                    jobTitle: document.getElementById('employee-job-title').value.trim(),
+                    status: document.getElementById('employee-status').value || 'Active',
+                    dateAdded: new Date().toISOString()
+                };
+
+                // Check for duplicate employee ID
+                const existing = employees.find(emp => emp.employeeId === employeeData.employeeId);
+                if (existing) {
+                    showAlert('Employee ID already exists!', 'error');
+                    return;
+                }
+
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'employees'), employeeData);
+                employeeData.id = docRef.id;
+                employees.push(employeeData);
+
+                closeAddEmployeeModal();
+                loadEmployeesTable();
+                loadCheckoutOptions();
+                showAlert('Employee added successfully!', 'success');
+            } catch (error) {
+                console.error('Error adding employee:', error);
+                showAlert('Error adding employee: ' + error.message, 'error');
+            }
+        }
+
+        // Load employees table
+        function loadEmployeesTable() {
+            const tbody = document.getElementById('employees-body');
+            tbody.innerHTML = '';
+
+            employees.forEach(employee => {
+                const equipmentOut = transactions.filter(t => t.employeeId === employee.id && !t.returnDate).length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.employeeId}</td>
+                    <td>${employee.name}</td>
+                    <td>${employee.department}</td>
+                    <td>${employee.jobTitle}</td>
+                    <td>${employee.email || 'N/A'}</td>
+                    <td><span style="color: ${employee.status === 'Active' ? '#28a745' : '#dc3545'}">${employee.status}</span></td>
+                    <td>${equipmentOut}</td>
+                    <td>
+                        <button class="btn btn-warning" onclick="editEmployee('${employee.id}')" title="Edit Employee">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteEmployee('${employee.id}')" title="Delete Employee">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Edit employee
+        function editEmployee(id) {
+            const employee = employees.find(emp => emp.id === id);
+            if (!employee) return;
+
+            document.getElementById('edit-employee-doc-id').value = employee.id;
+            document.getElementById('edit-employee-id').value = employee.employeeId;
+            document.getElementById('edit-employee-name').value = employee.name;
+            document.getElementById('edit-employee-email').value = employee.email || '';
+            document.getElementById('edit-employee-phone').value = employee.phone || '';
+            document.getElementById('edit-employee-department').value = employee.department;
+            document.getElementById('edit-employee-job-title').value = employee.jobTitle;
+            document.getElementById('edit-employee-status').value = employee.status;
+
+            document.getElementById('edit-employee-modal').style.display = 'block';
+        }
+
+        // Update employee
+        async function updateEmployee() {
+            try {
+                const id = document.getElementById('edit-employee-doc-id').value;
+                const employeeData = {
+                    name: document.getElementById('edit-employee-name').value.trim(),
+                    email: document.getElementById('edit-employee-email').value.trim(),
+                    phone: document.getElementById('edit-employee-phone').value.trim(),
+                    department: document.getElementById('edit-employee-department').value,
+                    jobTitle: document.getElementById('edit-employee-job-title').value.trim(),
+                    status: document.getElementById('edit-employee-status').value,
+                    updated: new Date().toISOString()
+                };
+
+                const employeeRef = window.firebase.doc(window.firebase.db, 'employees', id);
+                await window.firebase.updateDoc(employeeRef, employeeData);
+
+                // Update local array
+                const index = employees.findIndex(emp => emp.id === id);
+                if (index !== -1) {
+                    employees[index] = { ...employees[index], ...employeeData };
+                }
+
+                closeEditEmployeeModal();
+                loadEmployeesTable();
+                showAlert('Employee updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating employee:', error);
+                showAlert('Error updating employee: ' + error.message, 'error');
+            }
+        }
+
+        // Delete employee
+        async function deleteEmployee(id) {
+            if (!confirm('Are you sure you want to delete this employee?')) return;
+
+            try {
+                // Check if employee has outstanding equipment
+                const outstandingEquipment = transactions.filter(t => t.employeeId === id && !t.returnDate);
+                if (outstandingEquipment.length > 0) {
+                    showAlert('Cannot delete employee with outstanding equipment!', 'error');
+                    return;
+                }
+
+                const employeeRef = window.firebase.doc(window.firebase.db, 'employees', id);
+                await window.firebase.deleteDoc(employeeRef);
+
+                employees = employees.filter(emp => emp.id !== id);
+                loadEmployeesTable();
+                loadCheckoutOptions();
+                showAlert('Employee deleted successfully!', 'success');
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                showAlert('Error deleting employee: ' + error.message, 'error');
+            }
+        }
+
+        // Search employees
+        function searchEmployees(query) {
+            const rows = document.querySelectorAll('#employees-body tr');
+            const searchTerm = query.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        // Checkout Equipment Functions
+        function loadCheckoutOptions() {
+            const equipmentSelect = document.getElementById('checkout-equipment');
+            const employeeSelect = document.getElementById('checkout-employee');
+
+            // Load available equipment (not currently checked out)
+            const checkedOutEquipmentIds = transactions.filter(t => !t.returnDate).map(t => t.equipmentId);
+            const availableEquipment = inventory.filter(item => !checkedOutEquipmentIds.includes(item.id));
+
+            equipmentSelect.innerHTML = '<option value="">Select Equipment</option>';
+            availableEquipment.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} ${item.assetTag ? '(' + item.assetTag + ')' : ''}`;
+                equipmentSelect.appendChild(option);
+            });
+
+            // Load active employees
+            const activeEmployees = employees.filter(emp => emp.status === 'Active');
+            employeeSelect.innerHTML = '<option value="">Select Employee</option>';
+            activeEmployees.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee.id;
+                option.textContent = `${employee.name} (${employee.employeeId})`;
+                employeeSelect.appendChild(option);
+            });
+        }
+
+        function loadEquipmentDetails() {
+            const equipmentId = document.getElementById('checkout-equipment').value;
+            const detailsDiv = document.getElementById('equipment-details');
+            const infoDiv = document.getElementById('equipment-info');
+
+            if (!equipmentId) {
+                detailsDiv.style.display = 'none';
+                return;
+            }
+
+            const equipment = inventory.find(item => item.id === equipmentId);
+            if (equipment) {
+                infoDiv.innerHTML = `
+                    <p><strong>Name:</strong> ${equipment.name}</p>
+                    <p><strong>Asset Tag:</strong> ${equipment.assetTag || 'N/A'}</p>
+                    <p><strong>Category:</strong> ${equipment.category || 'N/A'}</p>
+                    <p><strong>Current Condition:</strong> ${equipment.condition || 'N/A'}</p>
+                    <p><strong>Description:</strong> ${equipment.description || 'N/A'}</p>
+                    <p><strong>Location:</strong> ${equipment.location || 'N/A'}</p>
+                `;
+                detailsDiv.style.display = 'block';
+            }
+        }
+
+        function loadEmployeeDetails() {
+            const employeeId = document.getElementById('checkout-employee').value;
+            const detailsDiv = document.getElementById('employee-details');
+            const infoDiv = document.getElementById('employee-info');
+
+            if (!employeeId) {
+                detailsDiv.style.display = 'none';
+                return;
+            }
+
+            const employee = employees.find(emp => emp.id === employeeId);
+            if (employee) {
+                infoDiv.innerHTML = `
+                    <p><strong>Name:</strong> ${employee.name}</p>
+                    <p><strong>Employee ID:</strong> ${employee.employeeId}</p>
+                    <p><strong>Department:</strong> ${employee.department}</p>
+                    <p><strong>Job Title:</strong> ${employee.jobTitle}</p>
+                    <p><strong>Email:</strong> ${employee.email || 'N/A'}</p>
+                `;
+                                 detailsDiv.style.display = 'block';
+             }
+         }
+
+        // Checkout Equipment
+        async function checkoutEquipment() {
+            if (!checkPermission('equipment.checkout', 'You do not have permission to check out equipment.')) return;
+            
+            try {
+                const equipmentId = document.getElementById('checkout-equipment').value;
+                const employeeId = document.getElementById('checkout-employee').value;
+                const conditionBefore = document.getElementById('checkout-condition-before').value;
+                const expectedReturn = document.getElementById('checkout-expected-return').value;
+                const issuedBy = document.getElementById('checkout-issued-by').value || currentUser;
+                const notes = document.getElementById('checkout-notes').value;
+
+                if (!equipmentId || !employeeId || !conditionBefore || !expectedReturn) {
+                    showAlert('Please fill in all required fields!', 'error');
+                    return;
+                }
+
+                const equipment = inventory.find(item => item.id === equipmentId);
+                const employee = employees.find(emp => emp.id === employeeId);
+
+                const transaction = {
+                    userId: currentUser,
+                    companyId: currentCompany,
+                    transactionId: generateTransactionId(),
+                    equipmentId: equipmentId,
+                    equipmentName: equipment.name,
+                    assetTag: equipment.assetTag || '',
+                    employeeId: employeeId,
+                    employeeName: employee.name,
+                    employeeIdNumber: employee.employeeId,
+                    department: employee.department,
+                    jobTitle: employee.jobTitle,
+                    description: equipment.description || '',
+                    category: equipment.category || '',
+                    conditionBefore: conditionBefore,
+                    issuedBy: issuedBy,
+                    checkoutDate: new Date().toISOString(),
+                    expectedReturnDate: expectedReturn,
+                    notes: notes,
+                    status: 'Checked Out'
+                };
+
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'transactions'), transaction);
+                transaction.id = docRef.id;
+                transactions.push(transaction);
+
+                // Reset form
+                document.getElementById('checkout-form').reset();
+                document.getElementById('equipment-details').style.display = 'none';
+                document.getElementById('employee-details').style.display = 'none';
+
+                loadCheckoutOptions();
+                loadCheckoutTable();
+                loadCheckinTable();
+                showAlert('Equipment checked out successfully!', 'success');
+            } catch (error) {
+                console.error('Error checking out equipment:', error);
+                showAlert('Error checking out equipment: ' + error.message, 'error');
+            }
+        }
+
+        // Generate unique transaction ID
+        function generateTransactionId() {
+            const date = new Date();
+            const dateStr = date.getFullYear().toString() + 
+                          (date.getMonth() + 1).toString().padStart(2, '0') + 
+                          date.getDate().toString().padStart(2, '0');
+            const timeStr = Date.now().toString().slice(-6);
+            return `TXN${dateStr}${timeStr}`;
+        }
+
+        // Load checkout table
+        function loadCheckoutTable() {
+            const tbody = document.getElementById('checkout-body');
+            tbody.innerHTML = '';
+
+            const activeCheckouts = transactions.filter(t => !t.returnDate);
+
+            activeCheckouts.forEach(transaction => {
+                const checkoutDate = new Date(transaction.checkoutDate);
+                const expectedReturn = new Date(transaction.expectedReturnDate);
+                const today = new Date();
+                const daysOut = Math.ceil((today - checkoutDate) / (1000 * 60 * 60 * 24));
+                const isOverdue = today > expectedReturn;
+
+                const row = document.createElement('tr');
+                if (isOverdue) {
+                    row.style.backgroundColor = '#ffe6e6';
+                }
+
+                row.innerHTML = `
+                    <td>${transaction.transactionId}</td>
+                    <td>${transaction.equipmentName} ${transaction.assetTag ? '(' + transaction.assetTag + ')' : ''}</td>
+                    <td>${transaction.employeeName} (${transaction.employeeIdNumber})</td>
+                    <td>${checkoutDate.toLocaleDateString()}</td>
+                    <td>${expectedReturn.toLocaleDateString()}</td>
+                    <td>${daysOut}</td>
+                    <td><span style="color: ${isOverdue ? '#dc3545' : '#28a745'}">${isOverdue ? 'Overdue' : 'Active'}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="showCheckinModal('${transaction.id}')" title="Check In">📥</button>
+                        <button class="btn btn-warning" onclick="showTransactionDetails('${transaction.id}')" title="View Details">👁️</button>
+                        <button class="btn btn-danger" onclick="showLostDamagedModal('${transaction.id}')" title="Report Lost/Damaged">⚠️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Load check-in table
+        function loadCheckinTable() {
+            const tbody = document.getElementById('checkin-available-body');
+            tbody.innerHTML = '';
+
+            const activeCheckouts = transactions.filter(t => !t.returnDate);
+
+            activeCheckouts.forEach(transaction => {
+                const checkoutDate = new Date(transaction.checkoutDate);
+                const expectedReturn = new Date(transaction.expectedReturnDate);
+                const today = new Date();
+                const daysOut = Math.ceil((today - checkoutDate) / (1000 * 60 * 60 * 24));
+                const isOverdue = today > expectedReturn;
+
+                const row = document.createElement('tr');
+                if (isOverdue) {
+                    row.style.backgroundColor = '#ffe6e6';
+                }
+
+                row.innerHTML = `
+                    <td>${transaction.transactionId}</td>
+                    <td>${transaction.equipmentName} ${transaction.assetTag ? '(' + transaction.assetTag + ')' : ''}</td>
+                    <td>${transaction.employeeName} (${transaction.employeeIdNumber})</td>
+                    <td>${checkoutDate.toLocaleDateString()}</td>
+                    <td>${expectedReturn.toLocaleDateString()}</td>
+                    <td>${daysOut}</td>
+                    <td><span style="color: ${isOverdue ? '#dc3545' : '#28a745'}">${isOverdue ? 'Overdue' : 'Active'}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="showCheckinModal('${transaction.id}')" title="Check In">📥 Check In</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Show check-in modal
+        function showCheckinModal(transactionId) {
+            const transaction = transactions.find(t => t.id === transactionId);
+            if (!transaction) return;
+
+            document.getElementById('checkin-transaction-id').value = transactionId;
+
+            const detailsContent = document.getElementById('checkin-details-content');
+            detailsContent.innerHTML = `
+                <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
+                <p><strong>Equipment:</strong> ${transaction.equipmentName} ${transaction.assetTag ? '(' + transaction.assetTag + ')' : ''}</p>
+                <p><strong>Employee:</strong> ${transaction.employeeName} (${transaction.employeeIdNumber})</p>
+                <p><strong>Department:</strong> ${transaction.department}</p>
+                <p><strong>Check-Out Date:</strong> ${new Date(transaction.checkoutDate).toLocaleDateString()}</p>
+                <p><strong>Expected Return:</strong> ${new Date(transaction.expectedReturnDate).toLocaleDateString()}</p>
+                <p><strong>Condition (Before):</strong> ${transaction.conditionBefore}</p>
+                <p><strong>Issued By:</strong> ${transaction.issuedBy}</p>
+            `;
+
+            // Show/hide replacement cost field based on condition
+            const conditionSelect = document.getElementById('checkin-condition-after');
+            const replacementCostGroup = document.getElementById('replacement-cost-group');
+            
+            conditionSelect.addEventListener('change', function() {
+                if (this.value === 'Lost' || this.value === 'Damaged') {
+                    replacementCostGroup.style.display = 'block';
+                } else {
+                    replacementCostGroup.style.display = 'none';
+                }
+            });
+
+            document.getElementById('checkin-modal').style.display = 'block';
+        }
+
+        function closeCheckinModal() {
+            document.getElementById('checkin-modal').style.display = 'none';
+            document.getElementById('checkin-form').reset();
+            document.getElementById('replacement-cost-group').style.display = 'none';
+        }
+
+        // Check-in equipment
+        async function checkinEquipment() {
+            if (!checkPermission('equipment.checkin', 'You do not have permission to check in equipment.')) return;
+            
+            try {
+                const transactionId = document.getElementById('checkin-transaction-id').value;
+                const conditionAfter = document.getElementById('checkin-condition-after').value;
+                const returnedBy = document.getElementById('checkin-returned-by').value || currentUser;
+                const returnNotes = document.getElementById('checkin-return-notes').value;
+                const replacementCost = document.getElementById('checkin-replacement-cost').value;
+
+                if (!conditionAfter) {
+                    showAlert('Please select the equipment condition!', 'error');
+                    return;
+                }
+
+                const updateData = {
+                    returnDate: new Date().toISOString(),
+                    conditionAfter: conditionAfter,
+                    returnedBy: returnedBy,
+                    returnNotes: returnNotes,
+                    status: 'Returned'
+                };
+
+                if (conditionAfter === 'Lost' || conditionAfter === 'Damaged') {
+                    updateData.replacementCost = parseFloat(replacementCost) || 0;
+                    updateData.status = conditionAfter;
+                }
+
+                const transactionRef = window.firebase.doc(window.firebase.db, 'transactions', transactionId);
+                await window.firebase.updateDoc(transactionRef, updateData);
+
+                // Update local array
+                const index = transactions.findIndex(t => t.id === transactionId);
+                if (index !== -1) {
+                    transactions[index] = { ...transactions[index], ...updateData };
+                }
+
+                closeCheckinModal();
+                loadCheckoutTable();
+                loadCheckinTable();
+                loadEquipmentHistory();
+                loadEmployeeHistory();
+                showAlert('Equipment checked in successfully!', 'success');
+
+                // If lost or damaged, automatically create a report
+                if (conditionAfter === 'Lost' || conditionAfter === 'Damaged') {
+                    showLostDamagedModal(transactionId);
+                }
+            } catch (error) {
+                console.error('Error checking in equipment:', error);
+                showAlert('Error checking in equipment: ' + error.message, 'error');
+            }
+        }
+
+        // Show transaction details modal
+        function showTransactionDetails(transactionId) {
+            const transaction = transactions.find(t => t.id === transactionId);
+            if (!transaction) return;
+
+            const content = document.getElementById('transaction-details-content');
+            content.innerHTML = `
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
+                    <h4>Transaction Information</h4>
+                    <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
+                    <p><strong>Status:</strong> ${transaction.status}</p>
+                    <p><strong>Check-Out Date:</strong> ${new Date(transaction.checkoutDate).toLocaleDateString()}</p>
+                    ${transaction.returnDate ? `<p><strong>Return Date:</strong> ${new Date(transaction.returnDate).toLocaleDateString()}</p>` : ''}
+                    <p><strong>Expected Return:</strong> ${new Date(transaction.expectedReturnDate).toLocaleDateString()}</p>
+                    <p><strong>Issued By:</strong> ${transaction.issuedBy}</p>
+                    ${transaction.returnedBy ? `<p><strong>Returned By:</strong> ${transaction.returnedBy}</p>` : ''}
+                </div>
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                    <h4>Equipment Information</h4>
+                    <p><strong>Name:</strong> ${transaction.equipmentName}</p>
+                    <p><strong>Asset Tag:</strong> ${transaction.assetTag || 'N/A'}</p>
+                    <p><strong>Category:</strong> ${transaction.category}</p>
+                    <p><strong>Description:</strong> ${transaction.description || 'N/A'}</p>
+                    <p><strong>Condition (Before):</strong> ${transaction.conditionBefore}</p>
+                    ${transaction.conditionAfter ? `<p><strong>Condition (After):</strong> ${transaction.conditionAfter}</p>` : ''}
+                </div>
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                    <h4>Employee Information</h4>
+                    <p><strong>Name:</strong> ${transaction.employeeName}</p>
+                    <p><strong>Employee ID:</strong> ${transaction.employeeIdNumber}</p>
+                    <p><strong>Department:</strong> ${transaction.department}</p>
+                    <p><strong>Job Title:</strong> ${transaction.jobTitle}</p>
+                </div>
+                ${transaction.notes || transaction.returnNotes ? `
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                    <h4>Notes</h4>
+                    ${transaction.notes ? `<p><strong>Checkout Notes:</strong> ${transaction.notes}</p>` : ''}
+                    ${transaction.returnNotes ? `<p><strong>Return Notes:</strong> ${transaction.returnNotes}</p>` : ''}
+                </div>` : ''}
+                ${transaction.replacementCost ? `
+                <div style="background:#ffe6e6; padding:15px; border-radius:8px; margin-top:15px;">
+                    <h4>Replacement Cost</h4>
+                    <p><strong>Cost:</strong> $${transaction.replacementCost}</p>
+                </div>` : ''}
+            `;
+
+            document.getElementById('transaction-details-modal').style.display = 'block';
+        }
+
+        function closeTransactionDetails() {
+            document.getElementById('transaction-details-modal').style.display = 'none';
+        }
+
+        // Lost/Damaged Equipment Reports
+        function showLostDamagedModal(transactionId) {
+            const transaction = transactions.find(t => t.id === transactionId);
+            if (!transaction) return;
+
+            document.getElementById('report-transaction-id').value = transactionId;
+
+            const detailsContent = document.getElementById('report-equipment-content');
+            detailsContent.innerHTML = `
+                <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
+                <p><strong>Equipment:</strong> ${transaction.equipmentName} ${transaction.assetTag ? '(' + transaction.assetTag + ')' : ''}</p>
+                <p><strong>Employee:</strong> ${transaction.employeeName} (${transaction.employeeIdNumber})</p>
+                <p><strong>Department:</strong> ${transaction.department}</p>
+                <p><strong>Check-Out Date:</strong> ${new Date(transaction.checkoutDate).toLocaleDateString()}</p>
+                <p><strong>Condition (Before):</strong> ${transaction.conditionBefore}</p>
+            `;
+
+            // Pre-fill fields if already damaged/lost
+            if (transaction.conditionAfter === 'Lost') {
+                document.getElementById('report-type').value = 'Lost';
+            } else if (transaction.conditionAfter === 'Damaged') {
+                document.getElementById('report-type').value = 'Damaged';
+            }
+
+            if (transaction.replacementCost) {
+                document.getElementById('report-replacement-cost').value = transaction.replacementCost;
+            }
+
+            document.getElementById('lost-damaged-modal').style.display = 'block';
+        }
+
+        function closeLostDamagedModal() {
+            document.getElementById('lost-damaged-modal').style.display = 'none';
+            document.getElementById('lost-damaged-form').reset();
+        }
+
+        async function submitLostDamagedReport() {
+            try {
+                const transactionId = document.getElementById('report-transaction-id').value;
+                const reportType = document.getElementById('report-type').value;
+                const description = document.getElementById('report-description').value;
+                const dateDiscovered = document.getElementById('report-date-discovered').value;
+                const replacementCost = document.getElementById('report-replacement-cost').value;
+                const actionTaken = document.getElementById('report-action-taken').value;
+                const reportedBy = document.getElementById('report-reported-by').value || currentUser;
+
+                if (!reportType || !description || !replacementCost) {
+                    showAlert('Please fill in all required fields!', 'error');
+                    return;
+                }
+
+                const transaction = transactions.find(t => t.id === transactionId);
+                const report = {
+                    userId: currentUser,
+                    companyId: currentCompany,
+                    transactionId: transactionId,
+                    transactionIdNumber: transaction.transactionId,
+                    equipmentId: transaction.equipmentId,
+                    equipmentName: transaction.equipmentName,
+                    assetTag: transaction.assetTag,
+                    employeeId: transaction.employeeId,
+                    employeeName: transaction.employeeName,
+                    employeeIdNumber: transaction.employeeIdNumber,
+                    department: transaction.department,
+                    reportType: reportType,
+                    description: description,
+                    dateDiscovered: dateDiscovered || new Date().toISOString().split('T')[0],
+                    replacementCost: parseFloat(replacementCost),
+                    actionTaken: actionTaken,
+                    reportedBy: reportedBy,
+                    reportDate: new Date().toISOString(),
+                    status: 'Open'
+                };
+
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'lostDamagedReports'), report);
+                report.id = docRef.id;
+                lostDamagedReports.push(report);
+
+                closeLostDamagedModal();
+                showAlert(`${reportType} equipment report submitted successfully!`, 'success');
+            } catch (error) {
+                console.error('Error submitting report:', error);
+                showAlert('Error submitting report: ' + error.message, 'error');
+            }
+        }
+
+        // Equipment History Functions
+        function loadEquipmentHistory() {
+            const tbody = document.getElementById('equipment-history-body');
+            const equipmentFilter = document.getElementById('equipment-filter');
+            
+            tbody.innerHTML = '';
+            
+            // Populate equipment filter
+            equipmentFilter.innerHTML = '<option value="">All Equipment</option>';
+            const uniqueEquipment = [...new Set(transactions.map(t => t.equipmentName))];
+            uniqueEquipment.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                equipmentFilter.appendChild(option);
+            });
+
+            transactions.forEach(transaction => {
+                const checkoutDate = new Date(transaction.checkoutDate);
+                const returnDate = transaction.returnDate ? new Date(transaction.returnDate) : null;
+                const duration = returnDate ? 
+                    Math.ceil((returnDate - checkoutDate) / (1000 * 60 * 60 * 24)) + ' days' : 
+                    'Still out';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.transactionId}</td>
+                    <td>${transaction.equipmentName}</td>
+                    <td>${transaction.assetTag || 'N/A'}</td>
+                    <td>${transaction.employeeName} (${transaction.employeeIdNumber})</td>
+                    <td>${checkoutDate.toLocaleDateString()}</td>
+                    <td>${returnDate ? returnDate.toLocaleDateString() : 'Not returned'}</td>
+                    <td>${duration}</td>
+                    <td>${transaction.conditionBefore}</td>
+                    <td>${transaction.conditionAfter || 'N/A'}</td>
+                    <td><span style="color: ${getStatusColor(transaction.status)}">${transaction.status}</span></td>
+                    <td>
+                        <button class="btn btn-warning" onclick="showTransactionDetails('${transaction.id}')" title="View Details">👁️</button>
+                        ${transaction.status === 'Lost' || transaction.status === 'Damaged' ? 
+                            `<button class="btn btn-danger" onclick="viewLostDamagedReport('${transaction.id}')" title="View Report">📋</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterEquipmentHistory() {
+            const filter = document.getElementById('equipment-filter').value;
+            const rows = document.querySelectorAll('#equipment-history-body tr');
+
+            rows.forEach(row => {
+                if (!filter || row.cells[1].textContent.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Employee History Functions
+        function loadEmployeeHistory() {
+            const tbody = document.getElementById('employee-history-body');
+            const employeeFilter = document.getElementById('employee-filter');
+            
+            tbody.innerHTML = '';
+            
+            // Populate employee filter
+            employeeFilter.innerHTML = '<option value="">All Employees</option>';
+            const uniqueEmployees = [...new Set(transactions.map(t => t.employeeName))];
+            uniqueEmployees.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                employeeFilter.appendChild(option);
+            });
+
+            transactions.forEach(transaction => {
+                const checkoutDate = new Date(transaction.checkoutDate);
+                const returnDate = transaction.returnDate ? new Date(transaction.returnDate) : null;
+                const duration = returnDate ? 
+                    Math.ceil((returnDate - checkoutDate) / (1000 * 60 * 60 * 24)) + ' days' : 
+                    'Still out';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.transactionId}</td>
+                    <td>${transaction.employeeName} (${transaction.employeeIdNumber})</td>
+                    <td>${transaction.equipmentName} ${transaction.assetTag ? '(' + transaction.assetTag + ')' : ''}</td>
+                    <td>${checkoutDate.toLocaleDateString()}</td>
+                    <td>${returnDate ? returnDate.toLocaleDateString() : 'Not returned'}</td>
+                    <td>${duration}</td>
+                    <td>${transaction.conditionBefore}</td>
+                    <td>${transaction.conditionAfter || 'N/A'}</td>
+                    <td><span style="color: ${getStatusColor(transaction.status)}">${transaction.status}</span></td>
+                    <td>
+                        <button class="btn btn-warning" onclick="showTransactionDetails('${transaction.id}')" title="View Details">👁️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterEmployeeHistory() {
+            const filter = document.getElementById('employee-filter').value;
+            const rows = document.querySelectorAll('#employee-history-body tr');
+
+            rows.forEach(row => {
+                if (!filter || row.cells[1].textContent.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Helper function for status colors
+        function getStatusColor(status) {
+            switch(status) {
+                case 'Checked Out': return '#007bff';
+                case 'Returned': return '#28a745';
+                case 'Overdue': return '#dc3545';
+                case 'Lost': return '#dc3545';
+                case 'Damaged': return '#ffc107';
+                default: return '#6c757d';
+            }
+        }
+
+        // Search Functions
+        function searchCheckouts(query) {
+            const rows = document.querySelectorAll('#checkout-body tr');
+            const searchTerm = query.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function searchCheckinsAvailable(query) {
+            const rows = document.querySelectorAll('#checkin-available-body tr');
+            const searchTerm = query.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function searchEquipmentHistory(query) {
+            const rows = document.querySelectorAll('#equipment-history-body tr');
+            const searchTerm = query.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function searchEmployeeHistory(query) {
+            const rows = document.querySelectorAll('#employee-history-body tr');
+            const searchTerm = query.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function viewLostDamagedReport(transactionId) {
+            const report = lostDamagedReports.find(r => r.transactionId === transactionId);
+            if (!report) {
+                showAlert('No report found for this transaction', 'error');
+                return;
+            }
+
+            const content = document.getElementById('transaction-details-content');
+            content.innerHTML = `
+                <div style="background:#ffe6e6; padding:15px; border-radius:8px;">
+                    <h4>Lost/Damaged Equipment Report</h4>
+                    <p><strong>Report Type:</strong> ${report.reportType}</p>
+                    <p><strong>Report Date:</strong> ${new Date(report.reportDate).toLocaleDateString()}</p>
+                    <p><strong>Date Discovered:</strong> ${new Date(report.dateDiscovered).toLocaleDateString()}</p>
+                    <p><strong>Reported By:</strong> ${report.reportedBy}</p>
+                    <p><strong>Status:</strong> ${report.status}</p>
+                </div>
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                    <h4>Equipment Information</h4>
+                    <p><strong>Name:</strong> ${report.equipmentName}</p>
+                    <p><strong>Asset Tag:</strong> ${report.assetTag || 'N/A'}</p>
+                    <p><strong>Employee:</strong> ${report.employeeName} (${report.employeeIdNumber})</p>
+                    <p><strong>Department:</strong> ${report.department}</p>
+                </div>
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                    <h4>Report Details</h4>
+                    <p><strong>Description:</strong> ${report.description}</p>
+                    <p><strong>Replacement Cost:</strong> $${report.replacementCost}</p>
+                    ${report.actionTaken ? `<p><strong>Action Taken:</strong> ${report.actionTaken}</p>` : ''}
+                </div>
+            `;
+
+            document.getElementById('transaction-details-modal').style.display = 'block';
+        }
+
+        // ========================
+        // TEAM MANAGEMENT FUNCTIONS
+        // ========================
+
+        function updateUserInterface() {
+            // Show/hide team management for admins
+            const teamSection = document.getElementById('team-management-section');
+            if (teamSection) {
+                teamSection.style.display = hasPermission('all') ? 'block' : 'none';
+            }
+
+            // Update about section with current user info
+            if (currentUserData) {
+                document.getElementById('current-company').textContent = currentUserData.companyName || 'Unknown';
+                document.getElementById('current-role').textContent = ROLES[userRole]?.name || userRole;
+            }
+
+            // Load team members if admin
+            if (hasPermission('all')) {
+                loadTeamMembers();
+            }
+        }
+
+        function showInviteUserModal() {
+            if (!checkPermission('all', 'Only admins can invite team members.')) return;
+            document.getElementById('invite-user-modal').style.display = 'block';
+        }
+
+        function closeInviteUserModal() {
+            document.getElementById('invite-user-modal').style.display = 'none';
+            document.getElementById('invite-user-form').reset();
+            document.getElementById('role-description').style.display = 'none';
+        }
+
+        function showRoleDescription() {
+            const roleSelect = document.getElementById('invite-role');
+            const descDiv = document.getElementById('role-description');
+            const permissionsList = document.getElementById('role-permissions-list');
+            
+            const selectedRole = roleSelect.value;
+            if (selectedRole && ROLES[selectedRole]) {
+                const role = ROLES[selectedRole];
+                let permissionsHtml = '<ul>';
+                
+                if (role.permissions.includes('all')) {
+                    permissionsHtml += '<li><strong>Full System Access</strong> - Can manage everything</li>';
+                } else {
+                    role.permissions.forEach(permission => {
+                        const descriptions = {
+                            'inventory.manage': 'Add, edit, delete inventory items',
+                            'inventory.view': 'View inventory items',
+                            'equipment.manage': 'Full equipment management',
+                            'equipment.checkout': 'Check out equipment to employees',
+                            'equipment.checkin': 'Check in equipment from employees',
+                            'employees.manage': 'Add, edit, delete employees',
+                            'reports.view': 'View all reports and analytics',
+                            'reports.own': 'View only own transaction history',
+                            'transactions.manage': 'Manage all transactions',
+                            'transactions.view': 'View transaction history'
+                        };
+                        permissionsHtml += `<li>${descriptions[permission] || permission}</li>`;
+                    });
+                }
+                
+                permissionsHtml += '</ul>';
+                permissionsList.innerHTML = permissionsHtml;
+                descDiv.style.display = 'block';
+            } else {
+                descDiv.style.display = 'none';
+            }
+        }
+
+        async function inviteUser() {
+            if (!checkPermission('all', 'Only admins can invite team members.')) return;
+            
+            try {
+                const email = document.getElementById('invite-email').value.trim().toLowerCase();
+                const fullName = document.getElementById('invite-full-name').value.trim();
+                const role = document.getElementById('invite-role').value;
+                const tempPassword = document.getElementById('invite-temporary-password').value;
+                const message = document.getElementById('invite-message').value.trim();
+
+                if (!email || !fullName || !role || !tempPassword) {
+                    showAlert('Please fill in all required fields!', 'error');
+                    return;
+                }
+
+                // Check if user already exists
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const existingUserQuery = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
+                const existingUserSnapshot = await window.firebase.getDocs(existingUserQuery);
+                
+                if (!existingUserSnapshot.empty) {
+                    showAlert('A user with this email already exists!', 'error');
+                    return;
+                }
+
+                // Create Firebase auth account
+                const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, tempPassword);
+                const user = userCredential.user;
+
+                // Create user profile
+                const userProfile = {
+                    username: email.split('@')[0], // Use part before @ as username
+                    email: email,
+                    fullName: fullName,
+                    companyId: currentCompany,
+                    companyName: currentUserData.companyName,
+                    role: role,
+                    permissions: ROLES[role]?.permissions || [],
+                    status: 'active',
+                    invitedBy: currentUser,
+                    invitedAt: new Date().toISOString(),
+                    mustChangePassword: true,
+                    created: new Date().toISOString()
+                };
+
+                await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'users'), userProfile);
+
+                // TODO: Send invitation email (would need email service setup)
+                // sendInvitationEmail(email, fullName, tempPassword, message);
+
+                closeInviteUserModal();
+                loadTeamMembers();
+                showAlert(`Invitation sent to ${fullName} (${email})! They can now log in with the temporary password.`, 'success');
+            } catch (error) {
+                console.error('Error inviting user:', error);
+                showAlert('Error sending invitation: ' + error.message, 'error');
+            }
+        }
+
+        async function loadTeamMembers() {
+            if (!hasPermission('all')) return;
+
+            try {
+                const usersRef = window.firebase.collection(window.firebase.db, 'users');
+                const q = window.firebase.query(usersRef, window.firebase.where('companyId', '==', currentCompany));
+                const querySnapshot = await window.firebase.getDocs(q);
+                
+                const tbody = document.getElementById('team-members-body');
+                tbody.innerHTML = '';
+
+                querySnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${userData.fullName || userData.username}</td>
+                        <td>${userData.email}</td>
+                        <td><span style="color: ${getRoleColor(userData.role)}">${ROLES[userData.role]?.name || userData.role}</span></td>
+                        <td><span style="color: ${userData.status === 'active' ? '#28a745' : '#dc3545'}">${userData.status}</span></td>
+                        <td>${userData.lastIP ? new Date(userData.created).toLocaleDateString() : 'Never'}</td>
+                        <td>
+                            ${userData.email !== currentUserData.email ? `
+                                <button class="btn btn-warning" onclick="editTeamMember('${doc.id}')" title="Edit User">✏️</button>
+                                <button class="btn btn-danger" onclick="toggleUserStatus('${doc.id}', '${userData.status}')" title="${userData.status === 'active' ? 'Deactivate' : 'Activate'} User">${userData.status === 'active' ? '🚫' : '✅'}</button>
+                            ` : '<em>You</em>'}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading team members:', error);
+                showAlert('Error loading team members: ' + error.message, 'error');
+            }
+        }
+
+        function getRoleColor(role) {
+            const colors = {
+                admin: '#dc3545',
+                manager: '#007bff',
+                employee: '#28a745',
+                viewer: '#6c757d'
+            };
+            return colors[role] || '#6c757d';
+        }
+
+        async function toggleUserStatus(userId, currentStatus) {
+            if (!checkPermission('all', 'Only admins can manage user status.')) return;
+            
+            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+            const action = newStatus === 'active' ? 'activate' : 'deactivate';
+            
+            if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+
+            try {
+                const userRef = window.firebase.doc(window.firebase.db, 'users', userId);
+                await window.firebase.updateDoc(userRef, { 
+                    status: newStatus,
+                    updatedBy: currentUser,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                loadTeamMembers();
+                showAlert(`User ${action}d successfully!`, 'success');
+            } catch (error) {
+                console.error('Error updating user status:', error);
+                showAlert('Error updating user status: ' + error.message, 'error');
+            }
+        }
 
         // Global error handler
         window.addEventListener('error', function(event) {
