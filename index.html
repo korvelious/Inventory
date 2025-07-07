@@ -802,7 +802,7 @@
                 <label for="setup-confirm-password">Confirm Password</label>
                 <input type="password" id="setup-confirm-password" placeholder="Confirm Password" required>
                 
-                <button type="submit" class="login-btn">Create Company Account</button>
+                <button type="submit" class="login-btn" onclick="console.log('Create Company Account button clicked');">Create Company Account</button>
                 <button type="button" class="btn-link" onclick="showLoginForm()">Back to Login</button>
             </form>
         </div>
@@ -2023,6 +2023,7 @@
 
             // Setup form
             const setupForm = document.getElementById('setup-form');
+            console.log('Setup form found:', !!setupForm); // Debug log
             if (setupForm) {
                 setupForm.addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -2034,6 +2035,9 @@
                         showAlert('A critical error occurred. See console for details.', 'error');
                     }
                 });
+                console.log('Setup form event listener attached'); // Debug log
+            } else {
+                console.error('Setup form not found!'); // Debug log
             }
 
             // Add event listener for password reset button
@@ -2047,35 +2051,52 @@
         }
 
         async function setupCredentials() {
-            const companyName = document.getElementById('setup-company-name').value.trim();
-            const username = document.getElementById('setup-username').value.trim();
-            const email = document.getElementById('setup-email').value.trim().toLowerCase();
-            const fullName = document.getElementById('setup-full-name').value.trim();
-            const password = document.getElementById('setup-password').value;
-            const confirmPassword = document.getElementById('setup-confirm-password').value;
+            console.log('setupCredentials called'); // Debug log
+            
+            // Show loading state
+            const submitBtn = document.querySelector('#setup-form button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Creating Account...';
+            submitBtn.disabled = true;
+            
+            try {
+                const companyName = document.getElementById('setup-company-name').value.trim();
+                const username = document.getElementById('setup-username').value.trim();
+                const email = document.getElementById('setup-email').value.trim().toLowerCase();
+                const fullName = document.getElementById('setup-full-name').value.trim();
+                const password = document.getElementById('setup-password').value;
+                const confirmPassword = document.getElementById('setup-confirm-password').value;
+                
+                console.log('Form values:', { companyName, username, email, fullName, password: '***' }); // Debug log
+                
+                // Check if Firebase is available
+                if (!window.firebase || !window.firebase.auth || !window.firebase.db) {
+                    throw new Error('Firebase is not properly initialized. Please refresh the page.');
+                }
+                
             if (!companyName) {
                 showAlert('Please enter a company name!', 'error');
-                return;
+                throw new Error('Company name required');
             }
             if (!username) {
                 showAlert('Please enter a username!', 'error');
-                return;
+                throw new Error('Username required');
             }
             if (!fullName) {
                 showAlert('Please enter your full name!', 'error');
-                return;
+                throw new Error('Full name required');
             }
             if (password !== confirmPassword) {
                 showAlert('Passwords do not match!', 'error');
-                return;
+                throw new Error('Passwords do not match');
             }
             if (password.length < 6) {
                 showAlert('Password must be at least 6 characters long!', 'error');
-                return;
+                throw new Error('Password too short');
             }
             if (!email || !email.includes('@')) {
                 showAlert('Please enter a valid email address!', 'error');
-                return;
+                throw new Error('Invalid email');
             }
             // Check for duplicate username or email
             const usersRef = window.firebase.collection(window.firebase.db, 'users');
@@ -2084,14 +2105,14 @@
             const usernameSnapshot = await window.firebase.getDocs(qUsername);
             if (!usernameSnapshot.empty) {
                 showAlert('Username is already taken. Please choose another.', 'error');
-                return;
+                throw new Error('Username already taken');
             }
             // Check email
             const qEmail = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
             const emailSnapshot = await window.firebase.getDocs(qEmail);
             if (!emailSnapshot.empty) {
                 showAlert('Email is already registered. Please use another or log in.', 'error');
-                return;
+                throw new Error('Email already registered');
             }
             try {
                 // Create Firebase user account with real email
@@ -2144,6 +2165,15 @@
                 } else {
                     showAlert('Error creating account: ' + error.message, 'error');
                 }
+            }
+            
+            } catch (outerError) {
+                console.error('Setup credentials error:', outerError);
+                showAlert('An unexpected error occurred: ' + outerError.message, 'error');
+            } finally {
+                // Restore button state
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             }
         }
 
