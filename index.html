@@ -1924,7 +1924,7 @@
                     <textarea id="invite-message" class="form-control" rows="3" placeholder="Welcome to our inventory management system!"></textarea>
                 </div>
 
-                <button type="submit" class="btn btn-success">Send Invitation</button>
+                <button type="submit" class="btn btn-success" onclick="console.log('Send Invitation button clicked');">Send Invitation</button>
             </form>
         </div>
     </div>
@@ -2401,11 +2401,21 @@
             }
 
             const inviteUserForm = document.getElementById('invite-user-form');
+            console.log('Invite user form found:', !!inviteUserForm); // Debug log
             if (inviteUserForm) {
                 inviteUserForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    inviteUser();
+                    console.log('Invite user form submitted'); // Debug log
+                    try {
+                        inviteUser();
+                    } catch (err) {
+                        console.error('Invite user error:', err);
+                        showAlert('Error inviting user: ' + err.message, 'error');
+                    }
                 });
+                console.log('Invite user form event listener attached'); // Debug log
+            } else {
+                console.error('Invite user form not found!'); // Debug log
             }
 
             eventListenersSetup = true;
@@ -5415,7 +5425,24 @@
         }
 
         async function inviteUser() {
-            if (!checkPermission('all', 'Only admins can invite team members.')) return;
+            console.log('inviteUser function called'); // Debug log
+            console.log('Current user role:', userRole, 'Is admin:', isAdmin); // Debug log
+            console.log('User permissions:', userPermissions); // Debug log
+            
+            if (!checkPermission('all', 'Only admins can invite team members.')) {
+                console.log('Permission check failed'); // Debug log
+                return;
+            }
+            
+            console.log('Permission check passed, proceeding with invitation'); // Debug log
+            
+            // Show loading state
+            const submitBtn = document.querySelector('#invite-user-form button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.textContent : 'Send Invitation';
+            if (submitBtn) {
+                submitBtn.textContent = 'Sending Invitation...';
+                submitBtn.disabled = true;
+            }
             
             try {
                 const email = document.getElementById('invite-email').value.trim().toLowerCase();
@@ -5424,26 +5451,33 @@
                 const tempPassword = document.getElementById('invite-temporary-password').value;
                 const message = document.getElementById('invite-message').value.trim();
 
+                console.log('Form values:', { email, fullName, role, tempPassword: '***', message }); // Debug log
+
                 if (!email || !fullName || !role || !tempPassword) {
                     showAlert('Please fill in all required fields!', 'error');
-                    return;
+                    throw new Error('Missing required fields');
                 }
 
                 // Check if user already exists
+                console.log('Checking if user already exists...'); // Debug log
                 const usersRef = window.firebase.collection(window.firebase.db, 'users');
                 const existingUserQuery = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
                 const existingUserSnapshot = await window.firebase.getDocs(existingUserQuery);
                 
                 if (!existingUserSnapshot.empty) {
+                    console.log('User already exists'); // Debug log
                     showAlert('A user with this email already exists!', 'error');
-                    return;
+                    throw new Error('User already exists');
                 }
 
                 // Create Firebase auth account
+                console.log('Creating Firebase auth account...'); // Debug log
                 const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, tempPassword);
                 const user = userCredential.user;
+                console.log('Firebase auth account created successfully'); // Debug log
 
                 // Create user profile
+                console.log('Creating user profile in database...'); // Debug log
                 const userProfile = {
                     username: email.split('@')[0], // Use part before @ as username
                     email: email,
@@ -5459,7 +5493,9 @@
                     created: new Date().toISOString()
                 };
 
+                console.log('User profile data:', userProfile); // Debug log
                 await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'users'), userProfile);
+                console.log('User profile created successfully'); // Debug log
 
                 // TODO: Send invitation email (would need email service setup)
                 // sendInvitationEmail(email, fullName, tempPassword, message);
@@ -5467,9 +5503,16 @@
                 closeInviteUserModal();
                 loadTeamMembers();
                 showAlert(`Invitation sent to ${fullName} (${email})! They can now log in with the temporary password.`, 'success');
+                console.log('Invitation process completed successfully'); // Debug log
             } catch (error) {
                 console.error('Error inviting user:', error);
                 showAlert('Error sending invitation: ' + error.message, 'error');
+            } finally {
+                // Restore button state
+                if (submitBtn) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
             }
         }
 
