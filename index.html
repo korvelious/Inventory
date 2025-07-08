@@ -1638,7 +1638,10 @@
       <button class="logout-btn" onclick="returnToMainApp()" style="right:120px; background: rgba(40, 167, 69, 0.9);">↩️ Back to Main App</button>
       <div class="header">
         <h1>👤 Admin User Management</h1>
-        <p>View all signed up users</p>
+        <p>View all signed up users and impersonate them without passwords</p>
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 5px; margin-top: 10px;">
+          <small>⚠️ <strong>Admin Impersonation:</strong> Click "Impersonate" to log into any user account without knowing their password. Use for support and troubleshooting.</small>
+        </div>
       </div>
       <table class="inventory-table">
         <thead>
@@ -3945,14 +3948,23 @@
             querySnapshot.forEach(doc => {
               const user = doc.data();
               const tr = document.createElement('tr');
+              const lastImpersonation = user.lastAdminImpersonation ? 
+                `<br><small style="color: #666;">Last impersonated: ${new Date(user.lastAdminImpersonation).toLocaleString()}</small>` : '';
+              const userStatus = user.status === 'deactivated' ? 
+                `<span style="color: #dc3545; font-weight: bold;"> [DEACTIVATED]</span>` : '';
+              
               tr.innerHTML = `
-                <td>${user.username || ''}</td>
+                <td>${user.username || ''}${userStatus}</td>
                 <td>${user.email || ''}</td>
-                <td>${user.created ? new Date(user.created).toLocaleString() : ''}</td>
+                <td>${user.created ? new Date(user.created).toLocaleString() : ''}${lastImpersonation}</td>
                 <td>${user.lastIP || ''}</td>
                 <td>
-                  <button class="btn btn-warning" onclick="adminLoginAsUser('${user.email}')" title="Login as User">Login</button>
-                  <button class="btn btn-danger" onclick="deleteUser('${doc.id}')" title="Delete User">Delete</button>
+                  <button class="btn btn-warning" onclick="adminLoginAsUser('${user.email}')" 
+                          title="Impersonate this user (login without password)" 
+                          ${user.status === 'deactivated' ? 'disabled' : ''}>
+                    🔄 Impersonate
+                  </button>
+                  <button class="btn btn-danger" onclick="deleteUser('${doc.id}')" title="Delete User">🗑️ Delete</button>
                 </td>
               `;
               tbody.appendChild(tr);
@@ -4061,36 +4073,160 @@
 
         // Add adminLoginAsUser function
         async function adminLoginAsUser(email) {
-          const password = prompt('Enter the password for this user to log in as them:');
-          if (!password) return;
+          // Security check: Only allow real admins to impersonate
+          if (!isAdmin || userRole !== 'admin') {
+            showAlert('Access denied: Only administrators can impersonate users', 'error');
+            return;
+          }
+          
+          // Prevent self-impersonation
+          if (email === window.firebase.auth.currentUser?.email) {
+            showAlert('Cannot impersonate yourself', 'error');
+            return;
+          }
+          
+          // Confirm admin wants to impersonate this user
+          if (!confirm(`Are you sure you want to log in as ${email}? This will switch your session to that user's account.`)) {
+            return;
+          }
+          
           try {
-            const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
-            const user = userCredential.user;
-            // Get user profile from Firestore
+            // Get user profile from Firestore without requiring password
             const usersRef = window.firebase.collection(window.firebase.db, 'users');
             const q = window.firebase.query(usersRef, window.firebase.where('email', '==', email));
             const querySnapshot = await window.firebase.getDocs(q);
+            
             if (!querySnapshot.empty) {
               const userDoc = querySnapshot.docs[0];
               const userData = userDoc.data();
-              isAuthenticated = true;
-              currentUser = userData.username;
-              // Save IP
-              const ip = await getPublicIP();
-              await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { lastIP: ip });
-              // Create session
-              const session = {
-                username: userData.username,
+              
+              // Check if user account is active
+              if (userData.status === 'deactivated') {
+                showAlert('Cannot impersonate: User account is deactivated', 'error');
+                return;
+              }
+              
+              // Store original admin session info for potential restore
+              const originalSession = {
+                username: currentUser,
+                isAdmin: isAdmin,
+                userRole: userRole,
                 timestamp: Date.now()
               };
+              localStorage.setItem('admin_original_session', JSON.stringify(originalSession));
+              
+              // Switch to target user's session
+              isAuthenticated = true;
+              currentUser = userData.username;
+              userRole = userData.role || 'viewer';
+              isAdmin = userData.role === 'admin';
+              userPermissions = userData.permissions || ROLES[userRole]?.permissions || [];
+              
+              // Update IP tracking for audit purposes
+              const ip = await getPublicIP();
+              await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'users', userDoc.id), { 
+                lastIP: ip,
+                lastAdminImpersonation: new Date().toISOString()
+              });
+              
+              // Create user session
+              const session = {
+                username: userData.username,
+                timestamp: Date.now(),
+                impersonatedBy: originalSession.username // Track who impersonated this user
+              };
               localStorage.setItem('inventory_session', JSON.stringify(session));
+              
+              // Show main app with impersonated user's data
               await showMainApp();
-              showAlert('Logged in as ' + userData.username, 'success');
+              
+              // Add restore admin button to UI
+              addRestoreAdminButton();
+              
+              showAlert(`Successfully impersonating ${userData.username}. Click "Restore Admin" to return to your admin account.`, 'success');
             } else {
-              showLoginError('User profile not found!');
+              showAlert('User profile not found!', 'error');
             }
           } catch (error) {
-            showAlert('Login as user failed: ' + error.message, 'error');
+            showAlert('Admin impersonation failed: ' + error.message, 'error');
+          }
+        }
+        
+        // Add function to restore admin session
+        function addRestoreAdminButton() {
+          // Remove existing restore button if any
+          const existingBtn = document.getElementById('restore-admin-btn');
+          if (existingBtn) existingBtn.remove();
+          
+          // Remove existing impersonation indicator
+          const existingIndicator = document.getElementById('impersonation-indicator');
+          if (existingIndicator) existingIndicator.remove();
+          
+          // Create restore admin button
+          const restoreBtn = document.createElement('button');
+          restoreBtn.id = 'restore-admin-btn';
+          restoreBtn.className = 'logout-btn';
+          restoreBtn.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; background: #ff6b6b; border: none; color: white; padding: 10px 15px; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
+          restoreBtn.innerHTML = '🔄 Restore Admin';
+          restoreBtn.onclick = restoreAdminSession;
+          restoreBtn.title = 'Click to return to your admin account';
+          
+          document.body.appendChild(restoreBtn);
+          
+          // Add impersonation indicator to header
+          const indicator = document.createElement('div');
+          indicator.id = 'impersonation-indicator';
+          indicator.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; background: rgba(255, 107, 107, 0.9); color: white; padding: 8px 12px; border-radius: 5px; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 2px solid #ff6b6b;';
+          
+          const originalSession = localStorage.getItem('admin_original_session');
+          if (originalSession) {
+            const sessionData = JSON.parse(originalSession);
+            indicator.innerHTML = `⚠️ Impersonating: <strong>${currentUser}</strong><br><small>Original admin: ${sessionData.username}</small>`;
+          } else {
+            indicator.innerHTML = `⚠️ Impersonating: <strong>${currentUser}</strong>`;
+          }
+          
+          document.body.appendChild(indicator);
+        }
+        
+        // Function to restore original admin session
+        async function restoreAdminSession() {
+          try {
+            const originalSession = localStorage.getItem('admin_original_session');
+            if (!originalSession) {
+              showAlert('No admin session to restore', 'error');
+              return;
+            }
+            
+            const sessionData = JSON.parse(originalSession);
+            
+            // Restore admin session
+            currentUser = sessionData.username;
+            isAdmin = sessionData.isAdmin;
+            userRole = sessionData.userRole;
+            userPermissions = ROLES[userRole]?.permissions || [];
+            
+            // Update session storage
+            const newSession = {
+              username: sessionData.username,
+              timestamp: Date.now()
+            };
+            localStorage.setItem('inventory_session', JSON.stringify(newSession));
+            localStorage.removeItem('admin_original_session');
+            
+            // Remove restore button and impersonation indicator
+            const restoreBtn = document.getElementById('restore-admin-btn');
+            if (restoreBtn) restoreBtn.remove();
+            
+            const indicator = document.getElementById('impersonation-indicator');
+            if (indicator) indicator.remove();
+            
+            // Refresh the main app
+            await showMainApp();
+            
+            showAlert('Admin session restored successfully', 'success');
+          } catch (error) {
+            showAlert('Failed to restore admin session: ' + error.message, 'error');
           }
         }
 
